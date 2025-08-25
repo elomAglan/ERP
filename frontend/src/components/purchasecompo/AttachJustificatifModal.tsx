@@ -1,14 +1,14 @@
 import { useState } from "react";
 
-// Interface pour les props du modal
-interface AttachJustificatifModalProps {
+// Interface for modal props
+interface AttachProofModalProps {
     isOpen: boolean;
     onClose: () => void;
     onAttach: (purchaseId: number, documentName: string) => void;
-    purchase: { id: number; item: string } | null; // Props simplifiées
+    purchase: { id: number; item: string } | null; // Simplified props
 }
 
-const AttachJustificatifModal: React.FC<AttachJustificatifModalProps> = ({ isOpen, onClose, onAttach, purchase }) => {
+const AttachProofModal: React.FC<AttachProofModalProps> = ({ isOpen, onClose, onAttach, purchase }) => {
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -21,7 +21,7 @@ const AttachJustificatifModal: React.FC<AttachJustificatifModalProps> = ({ isOpe
         e.preventDefault();
         if (purchase && selectedFile) {
             onAttach(purchase.id, selectedFile.name);
-            setSelectedFile(null); // Réinitialiser l'état
+            setSelectedFile(null); // Reset state
             onClose();
         }
     };
@@ -31,14 +31,14 @@ const AttachJustificatifModal: React.FC<AttachJustificatifModalProps> = ({ isOpe
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 space-y-4">
-                <h3 className="text-xl font-semibold text-gray-800">Ajouter un justificatif</h3>
+                <h3 className="text-xl font-semibold text-gray-800">Add a proof of purchase</h3>
                 <p className="text-gray-600">
-                    Pour : **"{purchase.item}"**
+                    For: **"{purchase.item}"**
                 </p>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                            Sélectionner le fichier (facture/reçu)
+                            Select the file (invoice/receipt)
                         </label>
                         <input
                             type="file"
@@ -47,7 +47,7 @@ const AttachJustificatifModal: React.FC<AttachJustificatifModalProps> = ({ isOpe
                         />
                         {selectedFile && (
                             <p className="mt-1 text-sm text-gray-500">
-                                Fichier sélectionné : **{selectedFile.name}**
+                                Selected file: **{selectedFile.name}**
                             </p>
                         )}
                     </div>
@@ -57,14 +57,14 @@ const AttachJustificatifModal: React.FC<AttachJustificatifModalProps> = ({ isOpe
                             onClick={onClose}
                             className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                         >
-                            Annuler
+                            Cancel
                         </button>
                         <button
                             type="submit"
                             className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                             disabled={!selectedFile}
                         >
-                            Enregistrer
+                            Save
                         </button>
                     </div>
                 </form>
@@ -73,4 +73,4 @@ const AttachJustificatifModal: React.FC<AttachJustificatifModalProps> = ({ isOpe
     );
 };
 
-export default AttachJustificatifModal;
+export default AttachProofModal;

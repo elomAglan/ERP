@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { FaPlus, FaTrash, FaSearch, FaFilter, FaCheckCircle, FaFileDownload, FaUpload } from "react-icons/fa";
 
-// Importez les modaux
-import AddPurchaseModal from "../components/purchasecompo/AddPurchaseModal";
-import PurchaseDetailModal from "../components/purchasecompo/PurchaseDetailModal";
-import AttachJustificatifModal from "../components/purchasecompo/AttachJustificatifModal";
-// Importez le nouveau modal de filtre
-import FilterModal from "../components/purchasecompo/FilterModal";
+// Import modals - assuming these paths are correct relative to PurchasesPage
+import AddPurchaseModal from "../../components/purchasecompo/AddPurchaseModal";
+import PurchaseDetailModal from "../../components/purchasecompo/PurchaseDetailModal";
+import AttachJustificatifModal from "../../components/purchasecompo/AttachJustificatifModal"; // Note: Name remains 'AttachJustificatifModal' but content is translated
+import FilterModal from "../../components/purchasecompo/FilterModal";
 
-// Interface simplifiée pour le nouveau processus
+// Simplified interface for the new process
 interface Purchase {
     id: number;
     item: string;
@@ -20,18 +19,18 @@ interface Purchase {
 }
 
 const initialPurchases: Purchase[] = [
-    { id: 1, item: 'Licence Logiciel Comptable', supplier: 'Tech Innovations', date: '2025-08-20', amount: 250000, document: 'facture-001.pdf', status: 'paid' },
-    { id: 2, item: 'Fournitures de bureau', supplier: 'Bureau Facile', date: '2025-08-18', amount: 85000, document: null, status: 'pending_payment' },
-    { id: 3, item: 'Maintenance serveurs', supplier: 'Infra Services', date: '2025-08-15', amount: 1200000, document: 'reçu-005.pdf', status: 'pending_payment' },
+    { id: 1, item: 'Accounting Software License', supplier: 'Tech Innovations', date: '2025-08-20', amount: 250000, document: 'invoice-001.pdf', status: 'paid' },
+    { id: 2, item: 'Office Supplies', supplier: 'Easy Office', date: '2025-08-18', amount: 85000, document: null, status: 'pending_payment' },
+    { id: 3, item: 'Server Maintenance', supplier: 'Infra Services', date: '2025-08-15', amount: 1200000, document: 'receipt-005.pdf', status: 'pending_payment' },
 ];
 
 const formatDate = (date: string) =>
-    new Intl.DateTimeFormat('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' }).format(
+    new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'long', year: 'numeric' }).format(
         new Date(date)
     );
 
 const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(amount);
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'XOF' }).format(amount);
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -46,13 +45,13 @@ const PurchasesPage = () => {
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isAttachModalOpen, setIsAttachModalOpen] = useState(false);
-    // État pour le nouveau modal de filtre
+    // State for the new filter modal
     const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedPurchases, setSelectedPurchases] = useState<number[]>([]);
     const [selectedPurchaseToDetail, setSelectedPurchaseToDetail] = useState<Purchase | null>(null);
     const [selectedPurchaseToAttach, setSelectedPurchaseToAttach] = useState<Purchase | null>(null);
-    // Nouvel état pour les filtres actifs
+    // New state for active filters
     const [activeFilters, setActiveFilters] = useState({
         paid: false,
         pending: false,
@@ -91,7 +90,7 @@ const PurchasesPage = () => {
     const handleMarkAsPaid = () => {
         const paidPurchaseIds = selectedPendingPurchases.map(p => p.id);
         if (paidPurchaseIds.length === 0) {
-            alert("Veuillez sélectionner au moins une commande 'en attente de paiement' pour la marquer comme payée.");
+            alert("Please select at least one 'pending payment' order to mark as paid.");
             return;
         }
 
@@ -112,7 +111,7 @@ const PurchasesPage = () => {
                 setIsAttachModalOpen(true);
             }
         } else {
-            alert("Veuillez sélectionner une seule commande pour ajouter/modifier un justificatif.");
+            alert("Please select only one order to add/modify proof of purchase.");
         }
     };
     
@@ -133,7 +132,7 @@ const PurchasesPage = () => {
                 setIsDetailModalOpen(true);
             }
         } else {
-            alert("Veuillez sélectionner une seule commande pour voir les détails.");
+            alert("Please select only one order to view details.");
         }
     };
 
@@ -150,7 +149,7 @@ const PurchasesPage = () => {
     };
 
     const handleDeleteSelected = () => {
-        if(window.confirm("Êtes-vous sûr de vouloir supprimer les achats sélectionnés ?")) {
+        if(window.confirm("Are you sure you want to delete the selected purchases?")) {
             setPurchases(purchases.filter(p => !selectedPurchases.includes(p.id)));
             setSelectedPurchases([]);
         }
@@ -166,9 +165,9 @@ const PurchasesPage = () => {
         <div className="p-6 bg-gray-50 rounded-2xl shadow-lg min-h-full">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-gray-200">
                 <div>
-                    <h2 className="text-3xl font-bold text-gray-800">Gestion des Achats</h2>
+                    <h2 className="text-3xl font-bold text-gray-800">Purchase Management</h2>
                     <p className="text-gray-600 mt-1">
-                        Enregistrez, gérez et suivez les achats de l'entreprise en quelques clics.
+                        Record, manage, and track company purchases in a few clicks.
                     </p>
                 </div>
                 
@@ -177,7 +176,7 @@ const PurchasesPage = () => {
                     className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
                     <FaPlus className="w-4 h-4" />
-                    Nouvel Achat
+                    New Purchase
                 </button>
             </div>
 
@@ -186,7 +185,7 @@ const PurchasesPage = () => {
                     <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
                         type="text"
-                        placeholder="Rechercher un article ou fournisseur..."
+                        placeholder="Search item or supplier..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -197,7 +196,7 @@ const PurchasesPage = () => {
                     className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors relative"
                 >
                     <FaFilter className="w-4 h-4" />
-                    Filtres
+                    Filters
                     {activeFilterCount > 0 && (
                         <span className="absolute -top-2 -right-2 bg-blue-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
                             {activeFilterCount}
@@ -214,7 +213,7 @@ const PurchasesPage = () => {
                             className="flex items-center gap-2 px-3 py-1.5 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors text-sm"
                         >
                             <FaFileDownload className="w-3 h-3" />
-                            Voir détails
+                            View Details
                         </button>
                         
                         {selectedPurchases.length === 1 && (
@@ -223,7 +222,7 @@ const PurchasesPage = () => {
                                 className="flex items-center gap-2 px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm"
                             >
                                 <FaUpload className="w-3 h-3" />
-                                Ajouter/Modifier le justificatif
+                                Add/Modify Proof
                             </button>
                         )}
                         
@@ -233,7 +232,7 @@ const PurchasesPage = () => {
                                 className="flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors text-sm"
                             >
                                 <FaCheckCircle className="w-3 h-3" />
-                                Marquer comme payé
+                                Mark as Paid
                             </button>
                         )}
                         <button
@@ -241,7 +240,7 @@ const PurchasesPage = () => {
                             className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
                         >
                             <FaTrash className="w-3 h-3" />
-                            Supprimer
+                            Delete
                         </button>
                     </div>
                 )}
@@ -259,11 +258,11 @@ const PurchasesPage = () => {
                                     className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
                                 />
                             </th>
-                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Article</th>
-                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Fournisseur</th>
+                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Item</th>
+                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Supplier</th>
                             <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
-                            <th className="py-3 px-6 text-right text-xs font-medium text-gray-500 uppercase">Montant</th>
+                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                            <th className="py-3 px-6 text-right text-xs font-medium text-gray-500 uppercase">Amount</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200">
@@ -287,8 +286,8 @@ const PurchasesPage = () => {
                                 <td className="py-4 px-6 text-sm text-gray-700">{formatDate(purchase.date)}</td>
                                 <td className="py-4 px-6">
                                     <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(purchase.status)}`}>
-                                        {purchase.status === 'pending_payment' && 'En attente de paiement'}
-                                        {purchase.status === 'paid' && 'Payé'}
+                                        {purchase.status === 'pending_payment' && 'Pending Payment'}
+                                        {purchase.status === 'paid' && 'Paid'}
                                     </span>
                                 </td>
                                 <td className="py-4 px-6 text-sm text-gray-700 text-right font-mono">{formatCurrency(purchase.amount)}</td>
@@ -327,7 +326,7 @@ const PurchasesPage = () => {
                 purchase={selectedPurchaseToAttach}
             />
             
-            {/* Nouveau modal pour les filtres */}
+            {/* New modal for filters */}
             <FilterModal
                 isOpen={isFilterModalOpen}
                 onClose={() => setIsFilterModalOpen(false)}

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { FaPlus } from "react-icons/fa";
 
-// Interface pour un achat
+// Purchase interface
 interface Purchase {
     id: number;
     item: string;
@@ -13,12 +13,12 @@ interface Purchase {
 }
 
 const availableItems = [
-    'Équipement de bureau',
-    'Matières premières',
-    'Logiciel de comptabilité',
-    'Services de maintenance',
-    'Fournitures de nettoyage',
-    'Abonnement Cloud'
+    'Office Equipment',
+    'Raw Materials',
+    'Accounting Software',
+    'Maintenance Services',
+    'Cleaning Supplies',
+    'Cloud Subscription'
 ];
 
 const AddPurchaseModal: React.FC<{
@@ -49,7 +49,7 @@ const AddPurchaseModal: React.FC<{
             amount: parseFloat(formData.amount),
             document: formData.document ? formData.document.name : null,
         });
-        
+
         setFormData({
             item: availableItems[0],
             supplier: '',
@@ -66,13 +66,13 @@ const AddPurchaseModal: React.FC<{
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 pt-10">
             <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
                 <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-xl font-semibold text-gray-800">Nouvel Achat</h3>
-                    <p className="text-gray-600 mt-1">Saisissez rapidement un nouvel achat</p>
+                    <h3 className="text-xl font-semibold text-gray-800">New Purchase</h3>
+                    <p className="text-gray-600 mt-1">Quickly enter a new purchase</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Article *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Item *</label>
                         <select
                             required
                             value={formData.item}
@@ -84,14 +84,14 @@ const AddPurchaseModal: React.FC<{
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Fournisseur *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
                         <input
                             type="text"
                             required
                             value={formData.supplier}
                             onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
                             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Nom du fournisseur"
+                            placeholder="Supplier name"
                         />
                     </div>
 
@@ -107,7 +107,7 @@ const AddPurchaseModal: React.FC<{
                     </div>
 
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Montant (CFA) *</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Amount (CFA) *</label>
                         <input
                             type="number"
                             required
@@ -118,9 +118,9 @@ const AddPurchaseModal: React.FC<{
                             placeholder="0"
                         />
                     </div>
-                    
+
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Justificatif (facture/reçu)</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Proof (invoice/receipt)</label>
                         <input
                             type="file"
                             onChange={handleFileChange}
@@ -128,7 +128,7 @@ const AddPurchaseModal: React.FC<{
                         />
                         {formData.document && (
                             <p className="mt-1 text-sm text-gray-500">
-                                Fichier sélectionné : **{formData.document.name}**
+                                Selected file: **{formData.document.name}**
                             </p>
                         )}
                     </div>
@@ -139,14 +139,14 @@ const AddPurchaseModal: React.FC<{
                             onClick={onClose}
                             className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
                         >
-                            Annuler
+                            Cancel
                         </button>
                         <button
                             type="submit"
                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                         >
                             <FaPlus className="w-4 h-4" />
-                            Enregistrer l'achat
+                            Save Purchase
                         </button>
                     </div>
                 </form>

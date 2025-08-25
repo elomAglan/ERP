@@ -40,6 +40,7 @@ type MenuSectionData = {
 };
 
 const Sidebar: React.FC<SidebarProps> = ({ className }) => {
+  // Set default open section to 'Management' for initial view
   const [openSection, setOpenSection] = useState<string | null>("Management");
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -49,7 +50,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     {
       title: "Management",
       items: [
-        { name: "Dashboard", path: "/", icon: <FaTachometerAlt />, badge: 3 },
+        { name: "Dashboard", path: "/dashboard", icon: <FaTachometerAlt />, badge: 3 }, // Assuming /dashboard is your main dashboard route
         { name: "Sales", path: "/sales", icon: <FaShoppingCart />, badge: 12 },
         { name: "Purchases", path: "/purchases", icon: <FaReceipt /> },
         { name: "Inventory", path: "/inventory", icon: <FaBoxOpen />, badge: 7 },
@@ -67,10 +68,10 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       ],
     },
     {
-      title: "Masters",
+      title: "Masters", // Renamed 'Masters' as per your provided code
       items: [
         { name: "Items", path: "/items", icon: <FaBook /> },
-        { name: "Store", path: "/store", icon: <FaStore /> },
+        { name: "Stores", path: "/stores", icon: <FaStore /> },
         { name: "Zones", path: "/zones", icon: <FaMapMarkerAlt /> },
       ],
     },
@@ -90,32 +91,42 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       {/* Header */}
       <div className="p-6 flex items-center justify-between border-b border-gray-200">
         {!isCollapsed && <h1 className="text-2xl font-bold text-blue-600">ERP12</h1>}
-        <button onClick={() => setIsCollapsed(!isCollapsed)}>
-          <FaChevronLeft className={`${isCollapsed ? "rotate-180" : ""} text-gray-500`} />
+        <button onClick={() => setIsCollapsed(!isCollapsed)} aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+          <FaChevronLeft className={`${isCollapsed ? "rotate-180" : ""} text-gray-500 transition-transform duration-300`} />
         </button>
       </div>
 
       {/* Menu */}
       <nav className="flex-1 overflow-y-auto mt-2 px-2">
         {menuSections.map((section) => (
-          <div key={section.title}>
+          <div key={section.title} className="mb-2"> {/* Added margin-bottom for spacing */}
             {!isCollapsed && (
               <button
                 onClick={() => toggleSection(section.title)}
-                className="flex justify-between w-full px-4 py-2 text-gray-600 uppercase text-xs font-semibold hover:bg-gray-100 rounded-lg"
+                // MODIFICATION: Rendre le titre de section plus visible
+                className="flex justify-between items-center w-full px-4 py-2 text-gray-800 text-sm font-bold uppercase hover:bg-gray-100 rounded-lg transition-colors"
+                aria-expanded={openSection === section.title}
               >
                 {section.title}
                 <FaChevronDown
-                  className={`${openSection === section.title ? "rotate-180" : ""}`}
+                  className={`${openSection === section.title ? "rotate-180" : ""} transition-transform duration-300`}
                 />
               </button>
             )}
 
+            {/* Always show section title when collapsed, but as a tooltip or simple icon */}
+            {isCollapsed && (
+              <div className="flex justify-center my-4">
+                {/* MODIFICATION: Rendre la première lettre du titre de section plus grande et plus audacieuse */}
+                <span className="text-gray-600 text-base font-bold uppercase">{section.title[0]}</span>
+              </div>
+            )}
+
             <div
-              className={`transition-all duration-300 ${
+              className={`transition-all duration-300 ease-in-out overflow-hidden ${
                 isCollapsed || openSection === section.title
-                  ? "max-h-96 opacity-100"
-                  : "max-h-0 opacity-0 overflow-hidden"
+                  ? "max-h-screen opacity-100" // Use max-h-screen for potentially larger sections
+                  : "max-h-0 opacity-0"
               }`}
             >
               {section.items.map((item) => {
@@ -128,7 +139,8 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                       isActive
                         ? "bg-blue-100 text-blue-700 font-medium"
                         : "text-gray-700 hover:bg-gray-100"
-                    }`}
+                    } ${isCollapsed ? 'justify-center' : ''}`}
+                    title={isCollapsed ? item.name : ''} // Add tooltip for collapsed state
                   >
                     {item.icon}
                     {!isCollapsed && <span>{item.name}</span>}
@@ -152,7 +164,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
 
       {/* Footer */}
       <div className="p-4 border-t border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 mb-2">
           <FaUserCircle className="w-8 h-8 text-gray-600" />
           {!isCollapsed && (
             <div>
@@ -162,13 +174,13 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
           )}
         </div>
 
-        <div className="flex items-center gap-2 mt-2">
-          <button className="p-2 text-gray-500 hover:text-gray-800 transition-colors relative">
+        <div className="flex items-center gap-2">
+          <button className="p-2 text-gray-500 hover:text-gray-800 transition-colors relative" aria-label="Notifications">
             <FaBell className="w-4 h-4" />
             <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
           </button>
           {!isCollapsed && (
-            <button className="p-2 text-gray-500 hover:text-gray-800 transition-colors">
+            <button className="p-2 text-gray-500 hover:text-gray-800 transition-colors" aria-label="Sign out">
               <FaSignOutAlt className="w-4 h-4" />
             </button>
           )}

@@ -16,7 +16,7 @@ interface FilterModalProps {
     }>>;
 }
 
-const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilters, onFilterChange }) => {
+const FilterSaleModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilters, onFilterChange }) => {
     if (!isOpen) return null;
 
     const handleCheckboxChange = (filterName: keyof typeof activeFilters) => {
@@ -41,7 +41,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
                 <div className="flex justify-between items-center border-b pb-2">
                     <h3 className="text-xl font-semibold text-gray-800 flex items-center gap-2">
                         <FaFilter />
-                        Filter Purchases
+                        Filter Sales
                     </h3>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
                         &times;
@@ -58,7 +58,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
                                     type="checkbox"
                                     checked={activeFilters.paid}
                                     onChange={() => handleCheckboxChange('paid')}
-                                    className="rounded text-blue-600"
+                                    className="rounded text-green-600"
                                 />
                                 <span>Paid</span>
                             </label>
@@ -67,7 +67,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
                                     type="checkbox"
                                     checked={activeFilters.pending}
                                     onChange={() => handleCheckboxChange('pending')}
-                                    className="rounded text-blue-600"
+                                    className="rounded text-green-600"
                                 />
                                 <span>Pending Payment</span>
                             </label>
@@ -83,7 +83,7 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
                                     type="checkbox"
                                     checked={activeFilters.noDocument}
                                     onChange={() => handleCheckboxChange('noDocument')}
-                                    className="rounded text-blue-600"
+                                    className="rounded text-green-600"
                                 />
                                 <span>No Document</span>
                             </label>
@@ -96,11 +96,11 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
                         onClick={handleClearFilters}
                         className="text-sm text-gray-500 hover:text-gray-700 transition-colors"
                     >
-                        Clear Filters
+                        Reset
                     </button>
                     <button
                         onClick={onClose}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                     >
                         Close
                     </button>
@@ -110,4 +110,4 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, activeFilter
     );
 };
 
-export default FilterModal;
+export default FilterSaleModal;
