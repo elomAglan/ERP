@@ -1,5 +1,6 @@
+// src/App.tsx
 import React from "react";
-import { Routes, Route, Navigate } from "react-router-dom"; // Importation de Navigate
+import { Routes, Route, Navigate } from "react-router-dom";
 
 // Composants
 import Sidebar from "./components/Sidebar";
@@ -13,6 +14,11 @@ import SalesPage from "./pages/management/SalesPage";
 import ItemsPage from "./pages/master/ItemsPage";
 import ZonesPage from "./pages/master/ZonesPage";
 import StoresPage from "./pages/master/StoresPage";
+import SalesHistoryPage from "./pages/history/SalesHistoryPage";
+import PurchaseHistoryPage from "./pages/history/PurchaseHistoryPage";
+import StockInPage from "./pages/history/StockInPage";
+import StockOutPage from "./pages/history/StockOutPage";
+import InvoicesPage from "./pages/history/InvoicesPage"; // Importez la nouvelle page
 
 const App: React.FC = () => {
   return (
@@ -22,13 +28,8 @@ const App: React.FC = () => {
       <main className="flex-1 p-8 overflow-auto">
         <div className="bg-white rounded-2xl shadow-lg p-6 min-h-full">
           <Routes>
-            {/* Redirige le chemin racine vers /dashboard */}
             <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            
-            {/* La page du tableau de bord est maintenant sur /dashboard */}
             <Route path="/dashboard" element={<DashboardPage />} /> 
-
-            {/* Vos autres routes existantes */}
             <Route path="/inventory" element={<InventoryPage />} />
             <Route path="/purchases" element={<PurchasesPage />} />
             <Route path="/reports" element={<ReportsPage />} />
@@ -36,6 +37,12 @@ const App: React.FC = () => {
             <Route path="/items" element={<ItemsPage />} />
             <Route path="/zones" element={<ZonesPage />} />
             <Route path="/stores" element={<StoresPage />} />
+            <Route path="/sales-history" element={<SalesHistoryPage />} /> 
+            <Route path="/purchase-history" element={<PurchaseHistoryPage />} /> 
+            <Route path="/stock-in" element={<StockInPage />} /> 
+            <Route path="/stock-out" element={<StockOutPage />} /> 
+            {/* Nouvelle route pour la page d'historique des factures */}
+            <Route path="/invoices" element={<InvoicesPage />} /> 
           </Routes>
         </div>
       </main>
