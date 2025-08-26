@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   FaTachometerAlt,
   FaShoppingCart,
@@ -19,11 +19,14 @@ import {
   FaBell,
   FaChevronLeft,
   FaChevronDown,
+  // FaUserCog a été retiré car le bouton "Manage Profile" a été supprimé
 } from "react-icons/fa";
 import { motion } from "framer-motion";
+// L'importation de useFirebase a été supprimée car vous n'utilisez pas Firebase.
 
-type SidebarProps = {
+export type SidebarProps = {
   className?: string;
+  setIsAuthenticated: React.Dispatch<React.SetStateAction<boolean>>;
 };
 
 type MenuItemData = {
@@ -39,18 +42,22 @@ type MenuSectionData = {
   items: MenuItemData[];
 };
 
-const Sidebar: React.FC<SidebarProps> = ({ className }) => {
-  // Set default open section to 'Management' for initial view
+const Sidebar: React.FC<SidebarProps> = ({ className, setIsAuthenticated }) => {
   const [openSection, setOpenSection] = useState<string | null>("Management");
   const [isCollapsed, setIsCollapsed] = useState(false);
-
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Détermine le nom d'affichage de l'utilisateur
+  // Utilise le nom d'utilisateur de localStorage, sinon 'Admin Manager' comme valeur par défaut.
+  const userDisplayName = localStorage.getItem("username") || "Admin Manager";
+  // L'e-mail a été intentionnellement retiré comme demandé précédemment.
 
   const menuSections: MenuSectionData[] = [
     {
       title: "Management",
       items: [
-        { name: "Dashboard", path: "/dashboard", icon: <FaTachometerAlt />, badge: 3 }, // Assuming /dashboard is your main dashboard route
+        { name: "Dashboard", path: "/dashboard", icon: <FaTachometerAlt />, badge: 3 },
         { name: "Sales", path: "/sales", icon: <FaShoppingCart />, badge: 12 },
         { name: "Purchases", path: "/purchases", icon: <FaReceipt /> },
         { name: "Inventory", path: "/inventory", icon: <FaBoxOpen />, badge: 7 },
@@ -68,7 +75,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       ],
     },
     {
-      title: "Masters", // Renamed 'Masters' as per your provided code
+      title: "Masters",
       items: [
         { name: "Items", path: "/items", icon: <FaBook /> },
         { name: "Stores", path: "/stores", icon: <FaStore /> },
@@ -81,6 +88,24 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
     setOpenSection(openSection === title ? null : title);
   };
 
+  const handleLogout = () => {
+    // Vide localStorage pour la déconnexion
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("username");
+    
+    // Met à jour l'état d'authentification
+    setIsAuthenticated(false);
+    
+    // Redirige vers la page de login
+    navigate("/login");
+  };
+
+  const handleProfileClick = () => {
+    if (!isCollapsed) { // Naviguer uniquement si la sidebar n'est pas réduite
+      navigate("/profile");
+    }
+  };
+
   return (
     <motion.div
       initial={{ width: 280 }}
@@ -88,22 +113,25 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
       transition={{ duration: 0.3 }}
       className={`bg-white text-gray-800 h-screen flex flex-col border-r border-gray-200 shadow-md ${className}`}
     >
-      {/* Header */}
+      {/* En-tête de la barre latérale */}
       <div className="p-6 flex items-center justify-between border-b border-gray-200">
         {!isCollapsed && <h1 className="text-2xl font-bold text-blue-600">ERP12</h1>}
-        <button onClick={() => setIsCollapsed(!isCollapsed)} aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}>
+        <button 
+          onClick={() => setIsCollapsed(!isCollapsed)} 
+          aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+        >
           <FaChevronLeft className={`${isCollapsed ? "rotate-180" : ""} text-gray-500 transition-transform duration-300`} />
         </button>
       </div>
 
-      {/* Menu */}
+      {/* Menu de navigation */}
       <nav className="flex-1 overflow-y-auto mt-2 px-2">
         {menuSections.map((section) => (
-          <div key={section.title} className="mb-2"> {/* Added margin-bottom for spacing */}
+          <div key={section.title} className="mb-2">
             {!isCollapsed && (
               <button
                 onClick={() => toggleSection(section.title)}
-                // MODIFICATION: Rendre le titre de section plus visible
                 className="flex justify-between items-center w-full px-4 py-2 text-gray-800 text-sm font-bold uppercase hover:bg-gray-100 rounded-lg transition-colors"
                 aria-expanded={openSection === section.title}
               >
@@ -114,10 +142,8 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
               </button>
             )}
 
-            {/* Always show section title when collapsed, but as a tooltip or simple icon */}
             {isCollapsed && (
               <div className="flex justify-center my-4">
-                {/* MODIFICATION: Rendre la première lettre du titre de section plus grande et plus audacieuse */}
                 <span className="text-gray-600 text-base font-bold uppercase">{section.title[0]}</span>
               </div>
             )}
@@ -125,7 +151,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
             <div
               className={`transition-all duration-300 ease-in-out overflow-hidden ${
                 isCollapsed || openSection === section.title
-                  ? "max-h-screen opacity-100" // Use max-h-screen for potentially larger sections
+                  ? "max-h-screen opacity-100"
                   : "max-h-0 opacity-0"
               }`}
             >
@@ -140,7 +166,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
                         ? "bg-blue-100 text-blue-700 font-medium"
                         : "text-gray-700 hover:bg-gray-100"
                     } ${isCollapsed ? 'justify-center' : ''}`}
-                    title={isCollapsed ? item.name : ''} // Add tooltip for collapsed state
+                    title={isCollapsed ? item.name : ''}
                   >
                     {item.icon}
                     {!isCollapsed && <span>{item.name}</span>}
@@ -162,26 +188,42 @@ const Sidebar: React.FC<SidebarProps> = ({ className }) => {
         ))}
       </nav>
 
-      {/* Footer */}
+      {/* Pied de page de la barre latérale (profil utilisateur et actions) */}
       <div className="p-4 border-t border-gray-200 bg-gray-50">
-        <div className="flex items-center gap-3 mb-2">
+        {/* Section Profil Cliquable */}
+        <div 
+          className={`flex items-center gap-3 mb-2 ${!isCollapsed ? 'cursor-pointer hover:bg-gray-100 rounded-lg p-2 -ml-2 -mt-2 transition-colors' : ''}`}
+          onClick={handleProfileClick}
+          aria-label="Manage Profile"
+          title="Manage Profile"
+        >
           <FaUserCircle className="w-8 h-8 text-gray-600" />
           {!isCollapsed && (
             <div>
-              <p className="text-sm font-semibold">Admin Manager</p>
-              <p className="text-xs text-gray-500">admin@nexuserp.com</p>
+              <p className="text-sm font-semibold text-gray-800">{userDisplayName}</p>
             </div>
           )}
         </div>
 
-        <div className="flex items-center gap-2">
-          <button className="p-2 text-gray-500 hover:text-gray-800 transition-colors relative" aria-label="Notifications">
+        <div className="flex flex-wrap items-center gap-2 mt-2">
+          {/* Bouton de notifications */}
+          <button
+            className="p-2 text-gray-500 hover:text-gray-800 transition-colors relative"
+            aria-label="Notifications"
+            title="Notifications"
+          >
             <FaBell className="w-4 h-4" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></span>
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">!</span> {/* Amélioration visuelle */}
           </button>
+
           {!isCollapsed && (
-            <button className="p-2 text-gray-500 hover:text-gray-800 transition-colors" aria-label="Sign out">
+            <button
+              className="p-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-1 text-sm font-medium"
+              aria-label="Sign out"
+              onClick={handleLogout}
+            >
               <FaSignOutAlt className="w-4 h-4" />
+              <span>Logout</span>
             </button>
           )}
         </div>
