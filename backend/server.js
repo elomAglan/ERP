@@ -1,16 +1,24 @@
 const express = require("express");
 const cors = require("cors");
+const bodyParser = require("body-parser");
+const db = require("./database"); // Importez votre module de base de données
+const authRoutes = require("./routes/auth");
+const itemRoutes = require("./routes/itemRoutes");
+
 const app = express();
 const PORT = 5000;
 
+// Middleware
 app.use(cors());
-app.use(express.json());
+app.use(bodyParser.json());
 
-// Exemple d’API : obtenir un message
-app.get("/api/hello", (req, res) => {
-  res.json({ message: "Bienvenue dans l’app de gestion 🚀" });
-});
+// Rend l'objet de base de données accessible aux routes et contrôleurs
+app.locals.db = db;
+
+// Définition des routes
+app.use("/auth", authRoutes);
+app.use("/api/items", itemRoutes);
 
 app.listen(PORT, () => {
-  console.log(`✅ Serveur Express lancé sur http://localhost:${PORT}`);
+  console.log("🚀 Serveur démarré sur http://localhost:5000");
 });

@@ -58,11 +58,11 @@ const ProfileManagementPage: React.FC = () => {
   const handleUsernameUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!username.trim()) {
-      showFeedback("Le nom d'utilisateur ne peut pas être vide.", "error");
+      showFeedback("Username cannot be empty.", "error");
       return;
     }
     if (!userId) {
-      showFeedback("Utilisateur non identifié pour la mise à jour.", "error");
+      showFeedback("User not identified for update.", "error");
       return;
     }
 
@@ -80,11 +80,11 @@ const ProfileManagementPage: React.FC = () => {
         showFeedback(data.message, "success");
         setIsEditingUsername(false); // Exit editing mode
       } else {
-        showFeedback(data.error || "Erreur lors de la mise à jour du nom d'utilisateur.", "error");
+        showFeedback(data.error || "Error updating username.", "error");
       }
     } catch (error) {
-      console.error("Erreur réseau ou du serveur:", error);
-      showFeedback("Erreur réseau, veuillez réessayer.", "error");
+      console.error("Network or server error:", error);
+      showFeedback("Network error, please try again.", "error");
     }
   };
 
@@ -97,19 +97,19 @@ const ProfileManagementPage: React.FC = () => {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentPassword || !newPassword || !confirmNewPassword) {
-      showFeedback("Veuillez remplir tous les champs du mot de passe.", "error");
+      showFeedback("Please fill in all password fields.", "error");
       return;
     }
     if (newPassword !== confirmNewPassword) {
-      showFeedback("Les nouveaux mots de passe ne correspondent pas.", "error");
+      showFeedback("New passwords do not match.", "error");
       return;
     }
     if (newPassword.length < 6) {
-      showFeedback("Le nouveau mot de passe doit contenir au moins 6 caractères.", "error");
+      showFeedback("New password must be at least 6 characters long.", "error");
       return;
     }
     if (!userId) {
-      showFeedback("Utilisateur non identifié pour le changement de mot de passe.", "error");
+      showFeedback("User not identified for password change.", "error");
       return;
     }
 
@@ -128,11 +128,11 @@ const ProfileManagementPage: React.FC = () => {
         setNewPassword("");
         setConfirmNewPassword("");
       } else {
-        showFeedback(data.error || "Erreur lors du changement de mot de passe.", "error");
+        showFeedback(data.error || "Error changing password.", "error");
       }
     } catch (error) {
-      console.error("Erreur réseau ou du serveur:", error);
-      showFeedback("Erreur réseau, veuillez réessayer.", "error");
+      console.error("Network or server error:", error);
+      showFeedback("Network error, please try again.", "error");
     }
   };
 
@@ -166,13 +166,13 @@ const ProfileManagementPage: React.FC = () => {
 
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl sm:text-4xl font-extrabold mb-8 text-blue-700 flex items-center gap-3">
-          <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" fillRule="evenodd"></path></svg> Gestion du Profil
+          <svg className="w-7 h-7 sm:w-8 sm:h-8" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" fillRule="evenodd"></path></svg> Profile Management
         </h1>
 
         {/* Username Management Card */}
         <section className="bg-white rounded-xl shadow-lg p-6 sm:p-8 mb-8">
           <h2 className="text-2xl font-semibold mb-6 text-gray-800 flex items-center gap-3">
-            <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" fillRule="evenodd"></path></svg> Nom d'utilisateur
+            <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" fillRule="evenodd"></path></svg> Username
           </h2>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             {isEditingUsername ? (
@@ -182,16 +182,16 @@ const ProfileManagementPage: React.FC = () => {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   className="flex-grow p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
-                  placeholder="Nouveau nom d'utilisateur"
+                  placeholder="New username"
                   required
                 />
                 <div className="flex gap-2 w-full sm:w-auto">
                   <button
                     type="submit"
                     className="flex-1 sm:flex-none px-5 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all duration-200 ease-in-out flex items-center justify-center gap-2 shadow-md"
-                    title="Sauvegarder le nom d'utilisateur"
+                    title="Save username"
                   >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 3H2V1h5a1 1 0 011 1v1zm0 16H2v-2h5a1 1 0 011 1v1zM11 1h-2v2h2V1zm0 16h-2v2h2v-2zM15 1h-2v2h2V1zm0 16h-2v2h2v-2zM19 1h-2v2h2V1zm0 16h-2v2h2v-2zM2 7h2v2H2V7zm16 0h-2v2h2V7zm-2 4h-2v2h2v-2zM4 11h2v2H4v-2zm-2 4h2v2H2v-2zm16 0h-2v2h2v-2zm-2-8h2V5h-2v2zM4 5h2V3H4v2zm12 0h2V3h-2v2zM6 1h2v2H6V1zm0 16h2v2H6v-2z" fillRule="evenodd" clipRule="evenodd"></path></svg> Sauvegarder
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 3H2V1h5a1 1 0 011 1v1zm0 16H2v-2h5a1 1 0 011 1v1zM11 1h-2v2h2V1zm0 16h-2v2h2v-2zM15 1h-2v2h2V1zm0 16h-2v2h2v-2zM19 1h-2v2h2V1zm0 16h-2v2h2v-2zM2 7h2v2H2V7zm16 0h-2v2h2V7zm-2 4h-2v2h2v-2zM4 11h2v2H4v-2zm-2 4h2v2H2v-2zm16 0h-2v2h2v-2zm-2-8h2V5h-2v2zM4 5h2V3H4v2zm12 0h2V3h-2v2zM6 1h2v2H6V1zm0 16h2v2H6v-2z" fillRule="evenodd" clipRule="evenodd"></path></svg> Save
                   </button>
                   <button
                     type="button"
@@ -200,9 +200,9 @@ const ProfileManagementPage: React.FC = () => {
                       setUsername(initialUsername); // Reset to the username loaded from local storage
                     }}
                     className="flex-1 sm:flex-none px-5 py-3 bg-gray-400 text-white rounded-lg hover:bg-gray-500 transition-all duration-200 ease-in-out flex items-center justify-center gap-2 shadow-md"
-                    title="Annuler"
+                    title="Cancel"
                   >
-                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path></svg> Annuler
+                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd"></path></svg> Cancel
                   </button>
                 </div>
               </form>
@@ -212,9 +212,9 @@ const ProfileManagementPage: React.FC = () => {
                 <button
                   onClick={() => setIsEditingUsername(true)}
                   className="px-5 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 ease-in-out flex items-center justify-center gap-2 shadow-md"
-                  title="Modifier le nom d'utilisateur"
+                  title="Edit username"
                 >
-                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-7.5 7.5a1 1 0 00-1.414 1.414L10 17.414l5-5V12a1 1 0 00-1-1h-1a1 1 0 00-1-1h-1a1 1 0 00-1-1H7.086z" fillRule="evenodd" clipRule="evenodd"></path></svg> Modifier
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zm-7.5 7.5a1 1 0 00-1.414 1.414L10 17.414l5-5V12a1 1 0 00-1-1h-1a1 1 0 00-1-1h-1a1 1 0 00-1-1H7.086z" fillRule="evenodd" clipRule="evenodd"></path></svg> Edit
                 </button>
               </>
             )}
@@ -224,12 +224,12 @@ const ProfileManagementPage: React.FC = () => {
         {/* Password Change Card */}
         <section className="bg-white rounded-xl shadow-lg p-6 sm:p-8">
           <h2 className="text-2xl font-semibold mb-6 text-gray-800 flex items-center gap-3">
-            <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H3a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg> Changer le mot de passe
+            <svg className="w-6 h-6 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2h2a2 2 0 012 2v5a2 2 0 01-2 2H3a2 2 0 01-2-2v-5a2 2 0 012-2h2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd"></path></svg> Change Password
           </h2>
           <form onSubmit={handleChangePassword} className="space-y-5">
             <div>
               <label htmlFor="currentPassword" className="block text-base font-medium text-gray-700 mb-2">
-                Mot de passe actuel
+                Current Password
               </label>
               <input
                 type="password"
@@ -242,7 +242,7 @@ const ProfileManagementPage: React.FC = () => {
             </div>
             <div>
               <label htmlFor="newPassword" className="block text-base font-medium text-gray-700 mb-2">
-                Nouveau mot de passe
+                New Password
               </label>
               <input
                 type="password"
@@ -255,7 +255,7 @@ const ProfileManagementPage: React.FC = () => {
             </div>
             <div>
               <label htmlFor="confirmNewPassword" className="block text-base font-medium text-gray-700 mb-2">
-                Confirmer le nouveau mot de passe
+                Confirm New Password
               </label>
               <input
                 type="password"
@@ -269,9 +269,9 @@ const ProfileManagementPage: React.FC = () => {
             <button
               type="submit"
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 ease-in-out flex items-center justify-center gap-2 shadow-md"
-              title="Changer le mot de passe"
+              title="Change password"
             >
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 3H2V1h5a1 1 0 011 1v1zm0 16H2v-2h5a1 1 0 011 1v1zM11 1h-2v2h2V1zm0 16h-2v2h2v-2zM15 1h-2v2h2V1zm0 16h-2v2h2v-2zM19 1h-2v2h2V1zm0 16h-2v2h2v-2zM2 7h2v2H2V7zm16 0h-2v2h2V7zm-2 4h-2v2h2v-2zM4 11h2v2H4v-2zm-2 4h2v2H2v-2zm16 0h-2v2h2v-2zm-2-8h2V5h-2v2zM4 5h2V3H4v2zm12 0h2V3h-2v2zM6 1h2v2H6V1zm0 16h2v2H6v-2z" fillRule="evenodd" clipRule="evenodd"></path></svg> Changer le mot de passe
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 3H2V1h5a1 1 0 011 1v1zm0 16H2v-2h5a1 1 0 011 1v1zM11 1h-2v2h2V1zm0 16h-2v2h2v-2zM15 1h-2v2h2V1zm0 16h-2v2h2v-2zM19 1h-2v2h2V1zm0 16h-2v2h2v-2zM2 7h2v2H2V7zm16 0h-2v2h2V7zm-2 4h-2v2h2v-2zM4 11h2v2H4v-2zm-2 4h2v2H2v-2zm16 0h-2v2h2v-2zm-2-8h2V5h-2v2zM4 5h2V3H4v2zm12 0h2V3h-2v2zM6 1h2v2H6V1zm0 16h2v2H6v-2z" fillRule="evenodd" clipRule="evenodd"></path></svg> Change Password
             </button>
           </form>
         </section>
