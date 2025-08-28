@@ -1,13 +1,10 @@
 /**
  * @file itemController.js
- * @description Controller pour la gestion des articles (CRUD) avec protection contre les doublons.
+ * @description Controller pour la gestion des articles (CRUD) avec protection contre les doublons et stock initial.
  */
 
 const itemController = {
-  /**
-   * @function getAllItems
-   * @description Récupère tous les articles de la base de données.
-   */
+  // --- Récupérer tous les articles ---
   getAllItems: (req, res) => {
     const db = req.app.locals.db;
     db.all("SELECT * FROM items", [], (err, rows) => {
@@ -19,16 +16,17 @@ const itemController = {
     });
   },
 
-  /**
-   * @function addItem
-   * @description Ajoute un nouvel article en vérifiant qu'il n'existe pas déjà (même nom + catégorie, insensible à la casse et aux espaces).
-   */
+  // --- Ajouter un article avec stock initial ---
   addItem: (req, res) => {
     const db = req.app.locals.db;
-    const { name, category, purchasePrice, salePrice } = req.body;
+    const { name, category, purchasePrice, salePrice, initialStock = 0, storeId } = req.body;
 
     if (!name || !category || purchasePrice === undefined) {
       return res.status(400).json({ error: "Le nom, la catégorie et le prix d'achat sont obligatoires." });
+    }
+
+    if (initialStock < 0) {
+      return res.status(400).json({ error: "Le stock initial ne peut pas être négatif." });
     }
 
     const sqlCheck = `
@@ -56,19 +54,38 @@ const itemController = {
           console.error("Erreur lors de l'ajout de l'article:", err.message);
           return res.status(500).json({ error: "Erreur serveur. Impossible d'ajouter l'article." });
         }
-        res.status(201).json({
-          id: this.lastID,
-          message: "Article ajouté avec succès.",
-          item: { id: this.lastID, name, category, purchasePrice, salePrice }
-        });
+
+        const itemId = this.lastID;
+
+        // --- Ajouter le stock initial si > 0 et storeId fourni ---
+        if (initialStock > 0 && storeId) {
+          const sqlStock = `
+            INSERT INTO stock_movements (product_id, store_id, type, quantity, reference)
+            VALUES (?, ?, 'IN', ?, 'INITIAL_STOCK')
+          `;
+          db.run(sqlStock, [itemId, storeId, initialStock], (err2) => {
+            if (err2) {
+              console.error("Erreur lors de l'ajout du stock initial:", err2.message);
+              return res.status(500).json({ error: "Article ajouté mais impossible d'enregistrer le stock initial." });
+            }
+            res.status(201).json({
+              id: itemId,
+              message: "Article ajouté avec succès avec stock initial.",
+              item: { id: itemId, name, category, purchasePrice, salePrice, initialStock, storeId }
+            });
+          });
+        } else {
+          res.status(201).json({
+            id: itemId,
+            message: "Article ajouté avec succès.",
+            item: { id: itemId, name, category, purchasePrice, salePrice }
+          });
+        }
       });
     });
   },
 
-  /**
-   * @function updateItem
-   * @description Met à jour un article en vérifiant qu'aucun autre article identique n'existe (même règle que pour addItem).
-   */
+  // --- Update et Delete restent identiques ---
   updateItem: (req, res) => {
     const db = req.app.locals.db;
     const { id } = req.params;
@@ -113,10 +130,6 @@ const itemController = {
     });
   },
 
-  /**
-   * @function deleteItem
-   * @description Supprime un article de la base de données.
-   */
   deleteItem: (req, res) => {
     const db = req.app.locals.db;
     const { id } = req.params;

@@ -3,13 +3,11 @@ const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcryptjs");
 const path = require("path");
 
+// Chemin de la base
 const dbPath = path.resolve(__dirname, "database.sqlite");
 const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error("Erreur lors de l'ouverture de la base de données:", err.message);
-    } else {
-        console.log("Connecté à SQLite:", dbPath);
-    }
+    if (err) console.error("Erreur ouverture DB:", err.message);
+    else console.log("Connecté à SQLite:", dbPath);
 });
 
 // --- Fonctions utilitaires avec Promises ---
@@ -37,21 +35,21 @@ const dbGet = (query, params = []) =>
         });
     });
 
-// --- Fonction de migration ---
+// --- Migration table users (ajout username si absent) ---
 async function migrateUsersTable() {
     try {
         const columns = await dbAll("PRAGMA table_info(users)");
-        const columnNames = columns.map(col => col.name);
-        if (!columnNames.includes("username")) {
+        const names = columns.map(c => c.name);
+        if (!names.includes("username")) {
             await dbRun("ALTER TABLE users ADD COLUMN username TEXT");
-            console.log("Colonne 'username' ajoutée à la table users.");
+            console.log("Colonne 'username' ajoutée à users");
         }
     } catch (err) {
-        console.error("Erreur migration table users:", err.message);
+        console.error("Migration users:", err.message);
     }
 }
 
-// --- Initialisation des tables et données ---
+// --- Création des tables ---
 async function initializeDatabase() {
     try {
         // Table users
@@ -65,16 +63,7 @@ async function initializeDatabase() {
         console.log("Table 'users' prête.");
         await migrateUsersTable();
 
-        // Ajout utilisateur par défaut
-        const defaultUser = "user";
-        const defaultPass = await bcrypt.hash("1234", 10);
-        const existingUser = await dbGet("SELECT * FROM users WHERE username = ?", [defaultUser]);
-        if (!existingUser) {
-            await dbRun("INSERT INTO users (username, password) VALUES (?, ?)", [defaultUser, defaultPass]);
-            console.log("Utilisateur par défaut ajouté :", defaultUser);
-        }
-
-        // Table items
+        // Table items (produits)
         await dbRun(`
             CREATE TABLE IF NOT EXISTS items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,14 +75,7 @@ async function initializeDatabase() {
         `);
         console.log("Table 'items' prête.");
 
-        const itemsCount = await dbGet("SELECT COUNT(*) AS count FROM items");
-        if (itemsCount.count === 0) {
-            await dbRun("INSERT INTO items (name, category, purchasePrice, salePrice) VALUES (?, ?, ?, ?)", ["Laptop", "Electronics", 1200, 1500]);
-            await dbRun("INSERT INTO items (name, category, purchasePrice, salePrice) VALUES (?, ?, ?, ?)", ["Keyboard", "Accessories", 50, 75]);
-            console.log("Données initiales insérées dans 'items'.");
-        }
-
-        // Table stores
+        // Table stores (magasins)
         await dbRun(`
             CREATE TABLE IF NOT EXISTS stores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -104,22 +86,32 @@ async function initializeDatabase() {
         `);
         console.log("Table 'stores' prête.");
 
-        const storesCount = await dbGet("SELECT COUNT(*) AS count FROM stores");
-        if (storesCount.count === 0) {
-            await dbRun("INSERT INTO stores (code, name, zone) VALUES (?, ?, ?)", ["ST-001", "Main Warehouse", JSON.stringify(["North Zone"])]);
-            await dbRun("INSERT INTO stores (code, name, zone) VALUES (?, ?, ?)", ["ST-002", "Backup Store", JSON.stringify(["South Zone"])]);
-            console.log("Données initiales insérées dans 'stores'.");
-        }
+        // Table stock_movements (mouvements de stock)
+        await dbRun(`
+            CREATE TABLE IF NOT EXISTS stock_movements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id INTEGER NOT NULL,
+                store_id INTEGER NOT NULL,
+                zone TEXT,
+                type TEXT NOT NULL, -- 'IN','OUT','ADJUST','TRANSFER_IN','TRANSFER_OUT'
+                quantity REAL NOT NULL,
+                reference TEXT,
+                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(product_id) REFERENCES items(id),
+                FOREIGN KEY(store_id) REFERENCES stores(id)
+            )
+        `);
+        console.log("Table 'stock_movements' prête.");
 
     } catch (err) {
-        console.error("Erreur lors de l'initialisation de la base de données:", err.message);
+        console.error("Erreur initialisation DB:", err.message);
     }
 }
 
 // Lancer l'initialisation
 initializeDatabase();
 
-// --- Exportations ---
+// --- Export ---
 module.exports = {
     dbRun,
     dbAll,
