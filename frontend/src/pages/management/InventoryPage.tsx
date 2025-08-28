@@ -1,348 +1,220 @@
-import React, { useState } from 'react';
-import { FaTrash, FaSearch, FaFilter, FaPlus, FaMinus, FaWarehouse } from "react-icons/fa";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
+import { FaWarehouse, FaBoxOpen, FaExchangeAlt, FaSpinner, FaTimes, FaCheck } from "react-icons/fa";
+import StockTable from "../../components/inventorycompo/StockTable";
+import InventoryModal from "../../components/inventorycompo/InventoryModal";
 
-// Importez les modales
-import FilterInventoryModal from "../../components/inventorycompo/FilterInventoryModal";
-import StockAdjustmentModal from "../../components/inventorycompo/StockAdjustmentModal";
-import StockInModal from "../../components/inventorycompo/StockInModal";
-import StockOutModal from "../../components/inventorycompo/StockOutModal";
-
-// --- NOUVELLES INTERFACES POUR LES VENTES ET ACHATS ---
-interface SaleLine {
-    itemId: number;
-    quantity: number;
-    unitPrice: number;
+interface ProductStock {
+  product_id: number;
+  name: string;
+  current_stock: number;
+  counted_qty?: number;
+  transfer_qty?: number;
 }
 
-interface Sale {
-    id: number;
-    saleDate: string;
-    customer: string;
-    totalAmount: number;
-    items: SaleLine[];
+interface Store {
+  id: number;
+  name: string;
 }
 
-interface PurchaseItem {
-    itemId: number;
-    quantity: number;
-}
+const API_BASE = "http://localhost:5000/api";
 
-interface Purchase {
-    id: number;
-    purchaseDate: string;
-    supplier: string;
-    items: PurchaseItem[];
-}
-// --- FIN DES NOUVELLES INTERFACES ---
+const InventoryManager: React.FC = () => {
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+  const [stock, setStock] = useState<ProductStock[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<{ message: string; isError: boolean } | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalType, setModalType] = useState<"inventory" | "transfer" | null>(null);
+  const [selectedProductIds, setSelectedProductIds] = useState<number[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [transferStoreId, setTransferStoreId] = useState<number | null>(null);
 
-// Interface pour un article d'inventaire
-interface Item {
-    id: number;
-    name: string;
-    category: string;
-    stock: number;
-    unit_price: number;
-    last_updated: string;
-}
+  const showFeedback = (message: string, isError = false) => {
+    setFeedback({ message, isError });
+    setTimeout(() => setFeedback(null), 5000);
+  };
 
-// Données d'inventaire factices
-const initialInventory: Item[] = [
-    { id: 1, name: 'Accounting Software License', category: 'Software', stock: 50, unit_price: 350000, last_updated: '2025-08-20' },
-    { id: 2, name: 'IT Consultation Hours', category: 'Service', stock: 100, unit_price: 150000, last_updated: '2025-08-18' },
-    { id: 3, name: 'Application Development Kit', category: 'Software', stock: 15, unit_price: 2500000, last_updated: '2025-08-22' },
-    { id: 4, name: 'Server Maintenance Contract', category: 'Service', stock: 5, unit_price: 80000, last_updated: '2025-08-21' },
-    { id: 5, name: 'User Training Manuals', category: 'Document', stock: 300, unit_price: 120000, last_updated: '2025-08-15' },
-];
+  useEffect(() => {
+    axios.get<Store[]>(`${API_BASE}/stores`)
+      .then((res) => setStores(Array.isArray(res.data) ? res.data : []))
+      .catch(() => showFeedback("Échec du chargement des magasins.", true));
+  }, []);
 
-// --- DONNÉES DE VENTES FACTICES ---
-const initialSales: Sale[] = [
-    {
-        id: 201, saleDate: '2025-08-26', customer: 'Client A', totalAmount: 400000,
-        items: [{ itemId: 1, quantity: 1, unitPrice: 350000 }, { itemId: 2, quantity: 1, unitPrice: 50000 }]
-    },
-    {
-        id: 202, saleDate: '2025-08-25', customer: 'Client B', totalAmount: 1000000,
-        items: [{ itemId: 3, quantity: 1, unitPrice: 1000000 }]
-    },
-    {
-        id: 203, saleDate: '2025-08-24', customer: 'Client C', totalAmount: 360000,
-        items: [{ itemId: 5, quantity: 3, unitPrice: 120000 }]
+  useEffect(() => {
+    if (!selectedStoreId) {
+      setStock([]);
+      return;
     }
-];
+    setLoading(true);
+    axios.get<ProductStock[]>(`${API_BASE}/inventory/${selectedStoreId}`)
+      .then((res) => setStock(Array.isArray(res.data) ? res.data : []))
+      .catch(() => showFeedback("Échec du chargement de l'inventaire.", true))
+      .finally(() => setLoading(false));
+  }, [selectedStoreId]);
 
-// --- DONNÉES D'ACHAT FACTICES (corrigées) ---
-const initialPurchases: Purchase[] = [
-    { id: 101, purchaseDate: '2025-08-25', supplier: 'Tech Solutions', items: [{ itemId: 1, quantity: 10 }, { itemId: 3, quantity: 5 }] },
-    { id: 102, purchaseDate: '2025-08-24', supplier: 'Office Depot', items: [{ itemId: 5, quantity: 50 }] },
-    { id: 103, purchaseDate: '2025-08-23', supplier: 'Consulting Group', items: [{ itemId: 2, quantity: 20 }] },
-];
-// --- FIN DES DONNÉES D'ACHAT FACTICES ---
+  const handleOpenModal = (type: "inventory" | "transfer") => {
+    if (selectedProductIds.length === 0) {
+      showFeedback("Veuillez sélectionner au moins un produit.", true);
+      return;
+    }
+    setModalType(type);
+    setIsModalOpen(true);
+  };
 
-const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF' }).format(amount);
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setModalType(null);
+    setTransferStoreId(null);
+  };
 
-const getStockColor = (stock: number) => {
-    if (stock < 10) return 'bg-red-100 text-red-800';
-    if (stock < 30) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-green-100 text-green-800';
-};
+  const filteredStock = stock.filter(p =>
+    p.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
-const InventoryPage: React.FC = () => {
-    const [inventory, setInventory] = useState<Item[]>(initialInventory);
-    const [sales] = useState<Sale[]>(initialSales);
-    
-    const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-    const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
-    const [isStockInModalOpen, setIsStockInModalOpen] = useState(false);
-    const [isStockOutModalOpen, setIsStockOutModalOpen] = useState(false);
-    
-    const [selectedItemToAdjust, setSelectedItemToAdjust] = useState<Item | null>(null);
-    const [searchTerm, setSearchTerm] = useState('');
-    const [selectedItems, setSelectedItems] = useState<number[]>([]);
-    const [activeFilters, setActiveFilters] = useState({
-        lowStock: false,
-        category: 'all',
-    });
+  // Fonction pour gérer l’ajout d’un nouvel article
 
-    const filteredItems = inventory.filter(item => {
-        const matchesSearchTerm =
-            item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.category.toLowerCase().includes(searchTerm.toLowerCase());
 
-        const matchesFilters =
-            (!activeFilters.lowStock || item.stock < 10) &&
-            (activeFilters.category === 'all' || activeFilters.category === item.category);
-
-        return matchesSearchTerm && matchesFilters;
-    });
-
-    const totalStockValue = filteredItems.reduce((sum, item) => sum + (item.stock * item.unit_price), 0);
-    const isAllSelected = filteredItems.length > 0 && selectedItems.length === filteredItems.length;
-
-    const handleDeleteSelected = () => {
-        if (selectedItems.length === 0) {
-            alert("Please select at least one item to delete.");
-            return;
-        }
-        if (window.confirm("Are you sure you want to delete the selected items?")) {
-            setInventory(inventory.filter(item => !selectedItems.includes(item.id)));
-            setSelectedItems([]);
-        }
-    };
-
-    const handleSelectAll = (checked: boolean) => {
-        setSelectedItems(checked ? filteredItems.map(item => item.id) : []);
-    };
-
-    const handleSelectItem = (id: number, checked: boolean) => {
-        if (checked) {
-            setSelectedItems([...selectedItems, id]);
-        } else {
-            setSelectedItems(selectedItems.filter(itemId => itemId !== id));
-        }
-    };
-    
-    // Fonction d'ajustement universelle
-    const handleAdjustStock = (itemId: number, newStock: number) => {
-        setInventory(prevInventory => 
-            prevInventory.map(item => 
-                item.id === itemId ? { ...item, stock: newStock, last_updated: new Date().toISOString().split('T')[0] } : item
-            )
-        );
-    };
-
-    const handleOpenAdjustModal = () => {
-        if (selectedItems.length !== 1) {
-            alert("Please select exactly one item to adjust stock.");
-            return;
-        }
-        const selectedItem = inventory.find(item => item.id === selectedItems[0]);
-        if (selectedItem) {
-            setSelectedItemToAdjust(selectedItem);
-            setIsAdjustModalOpen(true);
-        }
-    };
-
-    const activeFilterCount = (activeFilters.lowStock ? 1 : 0) + (activeFilters.category !== 'all' ? 1 : 0);
-    const categories = Array.from(new Set(initialInventory.map(item => item.category)));
-
-    return (
-        <div className="p-6 bg-gray-50 rounded-2xl shadow-lg min-h-full">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 pb-4 border-b border-gray-200">
-                <div>
-                    <h2 className="text-3xl font-bold text-gray-800">Inventory Management</h2>
-                    <p className="text-gray-600 mt-1">
-                        Track and manage your company's stock.
-                    </p>
-                </div>
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => setIsStockInModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                    >
-                        <FaPlus className="w-4 h-4" />
-                        Stock In
-                    </button>
-                    <button
-                        onClick={() => setIsStockOutModalOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                    >
-                        <FaMinus className="w-4 h-4" />
-                        Stock Out
-                    </button>
-                </div>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                <div className="relative flex-1">
-                    <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                    <input
-                        type="text"
-                        placeholder="Search by name or category..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                </div>
-                <button 
-                    onClick={() => setIsFilterModalOpen(true)}
-                    className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors relative"
-                >
-                    <FaFilter className="w-4 h-4" />
-                    Filters
-                    {activeFilterCount > 0 && (
-                        <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
-                            {activeFilterCount}
-                        </span>
-                    )}
-                </button>
-            </div>
-            
-            <div className="h-12 flex justify-end items-center mb-2 gap-2">
-                {selectedItems.length > 0 && (
-                    <div className="flex gap-2">
-                        {selectedItems.length === 1 && (
-                            <button
-                                onClick={handleOpenAdjustModal}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors text-sm"
-                            >
-                                <FaWarehouse className="w-3 h-3" />
-                                Adjust Stock
-                            </button>
-                        )}
-                        <button
-                            onClick={handleDeleteSelected}
-                            className="flex items-center gap-2 px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-                        >
-                            <FaTrash className="w-3 h-3" />
-                            Delete ({selectedItems.length})
-                        </button>
-                    </div>
-                )}
-            </div>
-
-            <div className="overflow-x-auto bg-white rounded-xl shadow">
-                <table className="min-w-full">
-                    <thead className="bg-gray-50">
-                        <tr>
-                            <th className="py-3 px-6 text-center">
-                                <input
-                                    type="checkbox"
-                                    checked={isAllSelected}
-                                    onChange={(e) => handleSelectAll(e.target.checked)}
-                                    className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                                />
-                            </th>
-                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Item Name</th>
-                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                            <th className="py-3 px-6 text-left text-xs font-medium text-gray-500 uppercase">Stock</th>
-                            <th className="py-3 px-6 text-right text-xs font-medium text-gray-500 uppercase">Unit Price</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                        {filteredItems.length > 0 ? (
-                            filteredItems.map((item) => (
-                                <tr 
-                                    key={item.id} 
-                                    className={`hover:bg-gray-50 transition-colors ${
-                                        selectedItems.includes(item.id) ? 'bg-green-50' : ''
-                                    }`}
-                                >
-                                    <td className="py-4 px-6 text-center">
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedItems.includes(item.id)}
-                                            onChange={(e) => handleSelectItem(item.id, e.target.checked)}
-                                            className="w-4 h-4 text-green-600 rounded focus:ring-green-500"
-                                        />
-                                    </td>
-                                    <td className="py-4 px-6 text-sm font-medium text-gray-900">{item.name}</td>
-                                    <td className="py-4 px-6 text-sm text-gray-700">{item.category}</td>
-                                    <td className="py-4 px-6 text-sm">
-                                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${getStockColor(item.stock)}`}>
-                                            {item.stock}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 px-6 text-sm text-gray-700 text-right font-mono">{formatCurrency(item.unit_price)}</td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={5} className="py-8 text-center text-gray-500">
-                                    No items found.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                    <tfoot className="bg-gray-50">
-                        <tr>
-                            <td colSpan={3} className="py-4 px-6 text-right font-semibold text-gray-800">
-                                Total Items:
-                            </td>
-                            <td className="py-4 px-6 text-right font-semibold text-gray-800">
-                                {filteredItems.length}
-                            </td>
-                            <td className="py-4 px-6 text-right font-semibold text-gray-800 font-mono">
-                                {formatCurrency(totalStockValue)}
-                            </td>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-
-            {/* Modales pour le filtre et la gestion des stocks */}
-            <FilterInventoryModal
-                isOpen={isFilterModalOpen}
-                onClose={() => setIsFilterModalOpen(false)}
-                activeFilters={activeFilters}
-                onFilterChange={setActiveFilters}
-                categories={categories}
-            />
-
-            <StockAdjustmentModal
-                isOpen={isAdjustModalOpen}
-                onClose={() => setIsAdjustModalOpen(false)}
-                onAdjustStock={handleAdjustStock}
-                item={selectedItemToAdjust}
-            />
-
-            <StockInModal
-                isOpen={isStockInModalOpen}
-                onClose={() => setIsStockInModalOpen(false)}
-                onAdjustStock={handleAdjustStock}
-                inventory={inventory}
-                purchases={initialPurchases}
-            />
-            
-            <StockOutModal
-                isOpen={isStockOutModalOpen}
-                onClose={() => setIsStockOutModalOpen(false)}
-                onAdjustStock={handleAdjustStock}
-                inventory={inventory}
-                sales={sales}
-            />
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 flex items-center">
+            <FaWarehouse className="mr-3 text-indigo-600" /> Gestion d'Inventaire
+          </h1>
+          <p className="text-gray-600 mt-2">Effectuez des inventaires et transférez des stocks entre magasins.</p>
         </div>
-    );
+
+        {feedback && (
+          <div className={`fixed top-4 right-4 text-white px-6 py-3 rounded-lg shadow-xl z-50 flex items-center animate-fade-in ${feedback.isError ? "bg-red-500" : "bg-green-500"}`}>
+            {feedback.isError ? <FaTimes className="mr-2" /> : <FaCheck className="mr-2" />}
+            {feedback.message}
+          </div>
+        )}
+
+        <div className="bg-white p-6 rounded-xl shadow-sm mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Magasin</label>
+              <select
+                value={selectedStoreId ?? ""}
+                onChange={(e) => setSelectedStoreId(Number(e.target.value))}
+                className="w-full p-3 border border-gray-300 rounded-lg"
+              >
+                <option value="" disabled>Sélectionnez un magasin</option>
+                {stores.map((s) => (<option key={s.id} value={s.id}>{s.name}</option>))}
+              </select>
+            </div>
+            <div className="col-span-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rechercher</label>
+              <input
+                type="text"
+                placeholder="Filtrer les produits..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full p-3 pl-10 border border-gray-300 rounded-lg"
+                disabled={!selectedStoreId}
+              />
+            </div>
+            <div className="col-span-1 flex items-end space-x-2">
+              <button
+                onClick={() => handleOpenModal("inventory")}
+                disabled={!selectedStoreId || loading || selectedProductIds.length === 0}
+                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center"
+              >
+                <FaBoxOpen className="mr-2" /> Inventaire
+              </button>
+              <button
+                onClick={() => handleOpenModal("transfer")}
+                disabled={!selectedStoreId || loading || selectedProductIds.length === 0}
+                className="flex-1 bg-green-600 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-700 disabled:opacity-50 flex items-center justify-center"
+              >
+                <FaExchangeAlt className="mr-2" /> Transfert
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12 bg-white rounded-xl shadow-sm"><FaSpinner className="animate-spin text-indigo-600 text-3xl mx-auto mb-3" /> <p className="text-gray-600">Chargement de l'inventaire...</p></div>
+        ) : selectedStoreId ? (
+          <StockTable
+            stock={filteredStock}
+            selectedProductIds={selectedProductIds}
+            setSelectedProductIds={setSelectedProductIds}
+          />
+        ) : (
+          <div className="text-center py-16 bg-white rounded-xl shadow-sm"><FaWarehouse className="text-gray-300 text-5xl mx-auto mb-4" /> <h3 className="text-lg font-medium text-gray-700 mb-2">Sélectionnez un magasin</h3><p className="text-gray-500">Veuillez choisir un magasin pour voir son inventaire</p></div>
+        )}
+
+        {isModalOpen && modalType === "inventory" && (
+          <InventoryModal
+            title="Ajustement d'Inventaire"
+            products={stock.filter(p => selectedProductIds.includes(p.product_id))}
+            onClose={handleCloseModal}
+            onSave={async (adjustedStock) => {
+              const adjustments = adjustedStock
+                .filter(p => (p.counted_qty ?? 0) > 0)
+                .map(p => ({
+                  product_id: p.product_id,
+                  store_id: selectedStoreId,
+                  counted_qty: p.counted_qty,
+                  inventory_reference: `INV-${Date.now()}`,
+                  zone: null,
+                }));
+              try {
+                await axios.post(`${API_BASE}/inventory/adjust/batch`, { adjustments });
+                showFeedback("Inventaire ajusté avec succès !");
+                handleCloseModal();
+                const res = await axios.get(`${API_BASE}/inventory/${selectedStoreId}`);
+                setStock(res.data.map((p: ProductStock) => ({ ...p, counted_qty: 0 })));
+                setSelectedProductIds([]);
+              } catch (err) {
+                showFeedback("Erreur lors de l'ajustement de l'inventaire.", true);
+              }
+            }}
+          />
+        )}
+        
+        {isModalOpen && modalType === "transfer" && (
+          <InventoryModal
+            title="Transfert de Stock"
+            products={stock.filter(p => selectedProductIds.includes(p.product_id))}
+            onClose={handleCloseModal}
+            onSave={async (adjustedStock) => {
+              if (!transferStoreId) {
+                showFeedback("Veuillez choisir un magasin de destination.", true);
+                return;
+              }
+              const transfers = adjustedStock
+                .filter(p => (p.transfer_qty ?? 0) > 0)
+                .map(p => ({
+                  product_id: p.product_id,
+                  from_store_id: selectedStoreId,
+                  to_store_id: transferStoreId,
+                  quantity: p.transfer_qty,
+                }));
+              try {
+                await axios.post(`${API_BASE}/inventory/transfer`, { transfers });
+                showFeedback("Transfert de stock réussi !");
+                handleCloseModal();
+                const res = await axios.get(`${API_BASE}/inventory/${selectedStoreId}`);
+                setStock(res.data.map((p: ProductStock) => ({ ...p, transfer_qty: 0 })));
+                setSelectedProductIds([]);
+                setTransferStoreId(null);
+              } catch (err) {
+                showFeedback("Erreur lors du transfert de stock.", true);
+              }
+            }}
+            stores={stores.filter(s => s.id !== selectedStoreId)}
+            transferStoreId={transferStoreId}
+            setTransferStoreId={setTransferStoreId}
+          />
+        )}
+      </div>
+    </div>
+  );
 };
 
-export default InventoryPage;
+export default InventoryManager;

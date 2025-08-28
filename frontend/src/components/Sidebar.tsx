@@ -13,16 +13,13 @@ import {
   FaTruckMoving,
   FaBook,
   FaStore,
-  FaMapMarkerAlt,
   FaUserCircle,
   FaSignOutAlt,
   FaBell,
   FaChevronLeft,
   FaChevronDown,
-  // FaUserCog a été retiré car le bouton "Manage Profile" a été supprimé
 } from "react-icons/fa";
 import { motion } from "framer-motion";
-// L'importation de useFirebase a été supprimée car vous n'utilisez pas Firebase.
 
 export type SidebarProps = {
   className?: string;
@@ -48,10 +45,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className, setIsAuthenticated }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Détermine le nom d'affichage de l'utilisateur
-  // Utilise le nom d'utilisateur de localStorage, sinon 'Admin Manager' comme valeur par défaut.
   const userDisplayName = localStorage.getItem("username") || "Admin Manager";
-  // L'e-mail a été intentionnellement retiré comme demandé précédemment.
 
   const menuSections: MenuSectionData[] = [
     {
@@ -79,7 +73,6 @@ const Sidebar: React.FC<SidebarProps> = ({ className, setIsAuthenticated }) => {
       items: [
         { name: "Items", path: "/items", icon: <FaBook /> },
         { name: "Stores", path: "/stores", icon: <FaStore /> },
-        { name: "Zones", path: "/zones", icon: <FaMapMarkerAlt /> },
       ],
     },
   ];
@@ -89,19 +82,16 @@ const Sidebar: React.FC<SidebarProps> = ({ className, setIsAuthenticated }) => {
   };
 
   const handleLogout = () => {
-    // Vide localStorage pour la déconnexion
     localStorage.removeItem("isAuthenticated");
     localStorage.removeItem("username");
     
-    // Met à jour l'état d'authentification
     setIsAuthenticated(false);
     
-    // Redirige vers la page de login
     navigate("/login");
   };
 
   const handleProfileClick = () => {
-    if (!isCollapsed) { // Naviguer uniquement si la sidebar n'est pas réduite
+    if (!isCollapsed) {
       navigate("/profile");
     }
   };
@@ -113,7 +103,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className, setIsAuthenticated }) => {
       transition={{ duration: 0.3 }}
       className={`bg-white text-gray-800 h-screen flex flex-col border-r border-gray-200 shadow-md ${className}`}
     >
-      {/* En-tête de la barre latérale */}
+      {/* Sidebar Header */}
       <div className="p-6 flex items-center justify-between border-b border-gray-200">
         {!isCollapsed && <h1 className="text-2xl font-bold text-blue-600">ERP12</h1>}
         <button 
@@ -125,7 +115,7 @@ const Sidebar: React.FC<SidebarProps> = ({ className, setIsAuthenticated }) => {
         </button>
       </div>
 
-      {/* Menu de navigation */}
+      {/* Navigation Menu */}
       <nav className="flex-1 overflow-y-auto mt-2 px-2">
         {menuSections.map((section) => (
           <div key={section.title} className="mb-2">
@@ -188,9 +178,9 @@ const Sidebar: React.FC<SidebarProps> = ({ className, setIsAuthenticated }) => {
         ))}
       </nav>
 
-      {/* Pied de page de la barre latérale (profil utilisateur et actions) */}
+      {/* Sidebar Footer (user profile and actions) */}
       <div className="p-4 border-t border-gray-200 bg-gray-50">
-        {/* Section Profil Cliquable */}
+        {/* Clickable Profile Section */}
         <div 
           className={`flex items-center gap-3 mb-2 ${!isCollapsed ? 'cursor-pointer hover:bg-gray-100 rounded-lg p-2 -ml-2 -mt-2 transition-colors' : ''}`}
           onClick={handleProfileClick}
@@ -206,14 +196,14 @@ const Sidebar: React.FC<SidebarProps> = ({ className, setIsAuthenticated }) => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 mt-2">
-          {/* Bouton de notifications */}
+          {/* Notifications Button */}
           <button
             className="p-2 text-gray-500 hover:text-gray-800 transition-colors relative"
             aria-label="Notifications"
             title="Notifications"
           >
             <FaBell className="w-4 h-4" />
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">!</span> {/* Amélioration visuelle */}
+            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-white text-xs flex items-center justify-center">!</span>
           </button>
 
           {!isCollapsed && (
