@@ -1,5 +1,7 @@
-// controllers/storeController.js
 const { dbRun, dbAll, dbGet } = require('../database');
+
+// --- Normaliser un nom (trim + lowercase) ---
+const normalizeName = (name) => name.trim().toLowerCase();
 
 // --- Récupérer tous les magasins ---
 exports.getAllStores = async (req, res) => {
@@ -17,16 +19,18 @@ exports.getAllStores = async (req, res) => {
 
 // --- Ajouter un nouveau magasin avec code auto-généré ---
 exports.addStore = async (req, res) => {
-    const { name, zone } = req.body; // le code est généré automatiquement
-    if (!name) {
-        return res.status(400).json({ error: 'Le nom est requis.' });
-    }
+    let { name, zone } = req.body;
+    if (!name) return res.status(400).json({ error: 'Le nom est requis.' });
 
+    const normalizedName = normalizeName(name);
     const zoneArray = Array.isArray(zone) ? zone : [];
 
     try {
-        // Vérifier si un magasin avec le même nom existe
-        const existingStore = await dbGet("SELECT id FROM stores WHERE name = ?", [name]);
+        // Vérifier unicité insensible à la casse et aux espaces
+        const existingStore = await dbGet(
+            "SELECT id FROM stores WHERE LOWER(TRIM(name)) = ?",
+            [normalizedName]
+        );
         if (existingStore) {
             return res.status(409).json({ error: 'Un magasin avec ce nom existe déjà.' });
         }
@@ -57,23 +61,20 @@ exports.addStore = async (req, res) => {
 // --- Mettre à jour un magasin existant ---
 exports.updateStore = async (req, res) => {
     const { id } = req.params;
-    const { name, zone } = req.body;
+    let { name, zone } = req.body;
+    if (!name) return res.status(400).json({ error: 'Le nom est requis.' });
 
-    if (!name) {
-        return res.status(400).json({ error: 'Le nom est requis.' });
-    }
-
+    const normalizedName = normalizeName(name);
     const zoneArray = Array.isArray(zone) ? zone : [];
 
     try {
         const currentStore = await dbGet("SELECT * FROM stores WHERE id = ?", [id]);
-        if (!currentStore) {
-            return res.status(404).json({ error: 'Magasin non trouvé.' });
-        }
+        if (!currentStore) return res.status(404).json({ error: 'Magasin non trouvé.' });
 
+        // Vérifier unicité pour les autres magasins
         const existingConflict = await dbGet(
-            "SELECT id FROM stores WHERE name = ? AND id != ?",
-            [name, id]
+            "SELECT id FROM stores WHERE LOWER(TRIM(name)) = ? AND id != ?",
+            [normalizedName, id]
         );
         if (existingConflict) {
             return res.status(409).json({ error: 'Un autre magasin avec ce nom existe déjà.' });
@@ -84,9 +85,7 @@ exports.updateStore = async (req, res) => {
             [name, JSON.stringify(zoneArray), id]
         );
 
-        if (result.changes === 0) {
-            return res.status(404).json({ error: 'Aucune modification effectuée.' });
-        }
+        if (result.changes === 0) return res.status(404).json({ error: 'Aucune modification effectuée.' });
 
         const updatedStore = await dbGet("SELECT * FROM stores WHERE id = ?", [id]);
         updatedStore.zone = JSON.parse(updatedStore.zone || "[]");
@@ -99,20 +98,24 @@ exports.updateStore = async (req, res) => {
 
 // --- Supprimer un ou plusieurs magasins ---
 exports.deleteStores = async (req, res) => {
-    let ids = req.params.ids.split(',').map(Number);
-    ids = ids.filter(id => !isNaN(id));
-
-    if (ids.length === 0) {
-        return res.status(400).json({ error: 'IDs de magasin invalides fournis.' });
-    }
+    let ids = req.params.ids.split(',').map(Number).filter(id => !isNaN(id));
+    if (ids.length === 0) return res.status(400).json({ error: 'IDs invalides fournis.' });
 
     try {
         const placeholders = ids.map(() => '?').join(',');
+
+        // Vérifier que les magasins ne contiennent pas d'articles
+        const storesWithItems = await dbAll(
+            `SELECT DISTINCT store_id FROM purchase_items WHERE store_id IN (${placeholders})`,
+            ids
+        );
+        if (storesWithItems.length > 0) {
+            return res.status(400).json({ error: 'Impossible de supprimer un magasin contenant des articles.' });
+        }
+
         const result = await dbRun(`DELETE FROM stores WHERE id IN (${placeholders})`, ids);
 
-        if (result.changes === 0) {
-            return res.status(404).json({ error: 'Aucun magasin trouvé avec les IDs fournis.' });
-        }
+        if (result.changes === 0) return res.status(404).json({ error: 'Aucun magasin trouvé avec les IDs fournis.' });
 
         res.json({ message: `${result.changes} magasin(s) supprimé(s) avec succès.` });
     } catch (err) {
