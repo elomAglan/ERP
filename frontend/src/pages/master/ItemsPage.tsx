@@ -8,8 +8,7 @@ interface Item {
   name: string;
   category: string;
   purchasePrice: number;
-  // This line was changed to make salePrice a required number type
-  salePrice: number; 
+  salePrice: number;
 }
 
 const API_URL = "http://localhost:5000/api/items";
@@ -48,44 +47,48 @@ const ItemsPage: React.FC = () => {
     fetchItems();
   }, [fetchItems]);
 
-  // Changed the type of newItemData to match the component's expectations
   const handleAddItem = useCallback(async (newItemData: Omit<Item, "id">): Promise<Item> => {
     setIsLoading(true);
     setError(null);
     try {
-      // Ensure salePrice is a number before sending
       const dataToSend = {
         ...newItemData,
-        salePrice: newItemData.salePrice ?? 0 // Provide a default value
+        salePrice: newItemData.salePrice ?? 0
       };
-      
+
       const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(dataToSend),
       });
 
+      const data = await res.json(); // Always read response data
+
       if (res.status === 409) {
-        const data = await res.json();
         setError(data.error || "An identical item already exists.");
         throw new Error(data.error || "Duplicate item");
       }
 
-      if (!res.ok) throw new Error(`Server error: ${res.statusText}`);
+      if (!res.ok) throw new Error(data.error || `Server error: ${res.statusText}`);
 
-      const serverItem = await res.json();
+      const serverItem = data;
       const addedItem: Item = {
         id: serverItem.id ?? Date.now(),
         name: serverItem.name,
         category: serverItem.category,
         purchasePrice: Number(serverItem.purchasePrice),
-        // Ensure salePrice is always a number
         salePrice: serverItem.salePrice != null ? Number(serverItem.salePrice) : 0,
       };
 
       await fetchItems();
       return addedItem;
     } catch (err) {
+      console.error("Error adding item:", err);
+      if (err instanceof Error) {
+        setError(err.message); // Set the error message if it's an Error object
+      } else {
+        setError("An unexpected error occurred during item addition.");
+      }
       throw err;
     } finally {
       setIsLoading(false);
@@ -96,10 +99,9 @@ const ItemsPage: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      // Ensure salePrice is a number before sending
       const dataToSend = {
         ...updatedItem,
-        salePrice: updatedItem.salePrice ?? 0 // Provide a default value
+        salePrice: updatedItem.salePrice ?? 0
       };
 
       const res = await fetch(`${API_URL}/${updatedItem.id}`, {
@@ -121,7 +123,12 @@ const ItemsPage: React.FC = () => {
       setItemToEdit(null);
       setIsEditModalOpen(false);
     } catch (err: any) {
-      console.error(err);
+      console.error("Error editing item:", err);
+      if (err instanceof Error) {
+        setError(err.message); // Set the error message if it's an Error object
+      } else {
+        setError("An unexpected error occurred during item editing.");
+      }
       throw err;
     } finally {
       setIsLoading(false);
@@ -130,20 +137,47 @@ const ItemsPage: React.FC = () => {
 
   const handleDeleteSelected = useCallback(async () => {
     if (!selectedItems.length) return;
+
+    // Use a custom modal or message box instead of window.confirm
+    // For this example, we'll simulate a confirmation.
     if (!window.confirm(`Are you sure you want to delete ${selectedItems.length} item(s)?`)) return;
 
     setIsLoading(true);
     setError(null);
+    const failedDeletions: string[] = [];
+
     try {
-      await Promise.all(selectedItems.map(id => fetch(`${API_URL}/${id}`, { method: "DELETE" })));
-      await fetchItems();
-      setSelectedItems([]);
+      // Process deletions one by one to get individual error messages
+      for (const id of selectedItems) {
+        try {
+          const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+          const data = await res.json(); // Always read the response body
+
+          if (!res.ok) {
+            failedDeletions.push(`Item ID ${id}: ${data.error || res.statusText}`);
+          }
+        } catch (err) {
+          console.error(`Error deleting item ID ${id}:`, err);
+          failedDeletions.push(`Item ID ${id}: Server error or network issue.`);
+        }
+      }
+
+      if (failedDeletions.length > 0) {
+        // Concatenate all error messages for display
+        setError(`Failed to delete some items:\n${failedDeletions.join("\n")}`);
+      } else {
+        // If all deletions were successful, re-fetch items
+        await fetchItems();
+        setSelectedItems([]);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete items");
+      console.error("General error during bulk deletion:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred during bulk deletion.");
     } finally {
       setIsLoading(false);
     }
   }, [selectedItems, fetchItems]);
+
 
   const categories = useMemo(() => {
     const uniqueCategories = Array.from(new Set(items.map(item => item.category)));
@@ -171,12 +205,12 @@ const ItemsPage: React.FC = () => {
       sortedItems.filter(
         item =>
           (item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          item.category.toLowerCase().includes(searchTerm.toLowerCase())) &&
+            item.category.toLowerCase().includes(searchTerm.toLowerCase())) &&
           (filterCategory === "all" || item.category === filterCategory)
       ),
     [sortedItems, searchTerm, filterCategory]
   );
-  
+
   const totalPages = Math.ceil(filteredItems.length / ITEMS_PER_PAGE);
   const currentItems = useMemo(() => {
     const indexOfLastItem = currentPage * ITEMS_PER_PAGE;
@@ -201,7 +235,7 @@ const ItemsPage: React.FC = () => {
   };
 
   const isItemSelected = useCallback((itemId: number) => selectedItems.includes(itemId), [selectedItems]);
-    
+
   const handleToggleSelection = useCallback((itemId: number) => {
     setSelectedItems(prev =>
       prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
@@ -238,14 +272,14 @@ const ItemsPage: React.FC = () => {
 
         {error && (
           <div
-            className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg flex justify-between items-center"
+            className="bg-red-50 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-lg flex justify-between items-center whitespace-pre-line"
             role="alert"
           >
             <div>
               <p className="font-medium">Error</p>
               <p>{error}</p>
             </div>
-            <button 
+            <button
               onClick={() => setError(null)}
               className="text-red-700 hover:text-red-900"
               aria-label="Close alert"
@@ -271,7 +305,7 @@ const ItemsPage: React.FC = () => {
                   aria-label="Search for items"
                 />
               </div>
-                
+
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <FaFilter className="text-gray-400" />
@@ -291,7 +325,7 @@ const ItemsPage: React.FC = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="flex flex-wrap gap-2 w-full justify-end mb-6">
             <button
               onClick={() => setIsAddModalOpen(true)}
@@ -300,7 +334,7 @@ const ItemsPage: React.FC = () => {
             >
               <FaPlus className="mr-1" /> New Item
             </button>
-              
+
             {selectedItems.length > 0 && (
               <>
                 <button
@@ -308,8 +342,6 @@ const ItemsPage: React.FC = () => {
                     const itemToEditId = selectedItems[0];
                     const item = items.find(i => i.id === itemToEditId);
                     if (item) {
-                      // Correctly handle the potential null value from the server
-                      // by providing a default of 0 before setting the state.
                       const itemForModal = { ...item, salePrice: item.salePrice ?? 0 };
                       setItemToEdit(itemForModal);
                       setIsEditModalOpen(true);
@@ -449,7 +481,6 @@ const ItemsPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="p-3 text-sm">{item.purchasePrice.toFixed(2)}</td>
-                      {/* Check for null or undefined before rendering */}
                       <td className="p-3 text-sm">{item.salePrice != null ? `${item.salePrice.toFixed(2)}` : "-"}</td>
                     </tr>
                   ))
@@ -464,7 +495,7 @@ const ItemsPage: React.FC = () => {
               {selectedItems.length > 0 && ` | ${selectedItems.length} selected`}
             </div>
           )}
-          
+
           {totalPages > 1 && (
             <div className="flex justify-center items-center mt-6 space-x-2">
               <button

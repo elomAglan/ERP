@@ -1,158 +1,99 @@
 import { useState } from "react";
-import { FaPlus } from "react-icons/fa";
+import axios from "axios";
 
-// Purchase interface
-interface Purchase {
-    id: number;
-    item: string;
-    supplier: string;
-    date: string;
-    amount: number;
-    document: string | null;
-    status: "pending_payment" | "paid";
+interface Item {
+  id: number;
+  name: string;
 }
 
-const availableItems = [
-    'Office Equipment',
-    'Raw Materials',
-    'Accounting Software',
-    'Maintenance Services',
-    'Cleaning Supplies',
-    'Cloud Subscription'
-];
+interface Store {
+  id: number;
+  name: string;
+}
 
-const AddPurchaseModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    onAdd: (purchase: Omit<Purchase, 'id' | 'status'>) => void;
-}> = ({ isOpen, onClose, onAdd }) => {
-    const [formData, setFormData] = useState({
-        item: availableItems[0],
-        supplier: '',
-        date: new Date().toISOString().split('T')[0],
-        amount: '',
-        document: null as File | null,
-    });
+interface PurchaseItem {
+  product_id: number;
+  store_id: number;
+  quantity: number;
+  unit_price: number;
+}
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            setFormData({ ...formData, document: e.target.files[0] });
-        }
-    };
+interface Props {
+  items: Item[];
+  stores: Store[];
+  onClose: () => void;
+  onCreated: () => void;
+}
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        onAdd({
-            item: formData.item,
-            supplier: formData.supplier,
-            date: formData.date,
-            amount: parseFloat(formData.amount),
-            document: formData.document ? formData.document.name : null,
-        });
+export default function AddPurchaseModal({ items, stores, onClose, onCreated }: Props) {
+  const [supplier, setSupplier] = useState("");
+  const [selectedItems, setSelectedItems] = useState<PurchaseItem[]>([]);
 
-        setFormData({
-            item: availableItems[0],
-            supplier: '',
-            date: new Date().toISOString().split('T')[0],
-            amount: '',
-            document: null,
-        });
-        onClose();
-    };
+  const addItem = () => setSelectedItems([...selectedItems, { product_id: 0, store_id: 0, quantity: 1, unit_price: 0 }]);
 
-    if (!isOpen) return null;
+  const updateItem = (index: number, field: keyof PurchaseItem, value: any) => {
+    const newItems = [...selectedItems];
+    newItems[index][field] = value;
+    setSelectedItems(newItems);
+  };
 
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 pt-10">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full max-h-[90vh] overflow-y-auto">
-                <div className="p-6 border-b border-gray-200">
-                    <h3 className="text-xl font-semibold text-gray-800">New Purchase</h3>
-                    <p className="text-gray-600 mt-1">Quickly enter a new purchase</p>
-                </div>
+  const removeItem = (index: number) => setSelectedItems(selectedItems.filter((_, i) => i !== index));
 
-                <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Item *</label>
-                        <select
-                            required
-                            value={formData.item}
-                            onChange={(e) => setFormData({ ...formData, item: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            {availableItems.map(item => <option key={item} value={item}>{item}</option>)}
-                        </select>
-                    </div>
+  const totalGlobal = selectedItems.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Supplier *</label>
-                        <input
-                            type="text"
-                            required
-                            value={formData.supplier}
-                            onChange={(e) => setFormData({ ...formData, supplier: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="Supplier name"
-                        />
-                    </div>
+  const handleCreate = async () => {
+    if (!supplier) return alert("Fournisseur requis");
+    if (selectedItems.length === 0) return alert("Au moins un article requis");
+    for (const item of selectedItems) {
+      if (!item.product_id) return alert("Sélectionner un article");
+      if (!item.store_id) return alert("Sélectionner un magasin");
+      if (!item.unit_price) return alert("Remplir le prix unitaire");
+    }
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-                        <input
-                            type="date"
-                            required
-                            value={formData.date}
-                            onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
+    try {
+      await axios.post("http://localhost:5000/api/purchases", {
+        supplier_name: supplier,
+        items: selectedItems,
+      });
+      alert("Achat créé !");
+      onCreated();
+      onClose();
+    } catch (err: any) {
+      console.error(err);
+      alert("Erreur: " + err.response?.data?.error);
+    }
+  };
 
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Amount (CFA) *</label>
-                        <input
-                            type="number"
-                            required
-                            step="1"
-                            value={formData.amount}
-                            onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="0"
-                        />
-                    </div>
-
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Proof (invoice/receipt)</label>
-                        <input
-                            type="file"
-                            onChange={handleFileChange}
-                            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
-                        />
-                        {formData.document && (
-                            <p className="mt-1 text-sm text-gray-500">
-                                Selected file: **{formData.document.name}**
-                            </p>
-                        )}
-                    </div>
-
-                    <div className="flex gap-3 pt-4">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                        >
-                            <FaPlus className="w-4 h-4" />
-                            Save Purchase
-                        </button>
-                    </div>
-                </form>
-            </div>
+  return (
+    <div style={{ position:"fixed", top:0,left:0,right:0,bottom:0, background:"rgba(0,0,0,0.5)", display:"flex", justifyContent:"center", alignItems:"center" }}>
+      <div style={{ background:"white", padding:20, width:600 }}>
+        <h2>Créer un achat</h2>
+        <div style={{ marginBottom:10 }}>
+          <label>Fournisseur: </label>
+          <input value={supplier} onChange={e => setSupplier(e.target.value)} />
         </div>
-    );
-};
 
-export default AddPurchaseModal;
+        {selectedItems.map((item, idx) => (
+          <div key={idx} style={{ display:"flex", gap:10, marginBottom:5, alignItems:"center" }}>
+            <select value={item.product_id} onChange={e => updateItem(idx,"product_id",Number(e.target.value))}>
+              <option value={0}>Sélectionner un article</option>
+              {items.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+            </select>
+            <input type="number" min={1} value={item.quantity} onChange={e => updateItem(idx,"quantity",Number(e.target.value))} style={{ width:60 }} />
+            <select value={item.store_id} onChange={e => updateItem(idx,"store_id",Number(e.target.value))}>
+              <option value={0}>Sélectionner un magasin</option>
+              {stores.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+            <input type="number" min={0} value={item.unit_price} onChange={e => updateItem(idx,"unit_price",Number(e.target.value))} style={{ width:80 }} />
+            <button onClick={() => removeItem(idx)}>Supprimer</button>
+          </div>
+        ))}
+
+        <button onClick={addItem}>Ajouter un article</button>
+        <div>Total global: {totalGlobal}</div>
+        <button onClick={handleCreate}>Créer l'achat</button>
+        <button onClick={onClose} style={{ marginLeft:10 }}>Fermer</button>
+      </div>
+    </div>
+  );
+}

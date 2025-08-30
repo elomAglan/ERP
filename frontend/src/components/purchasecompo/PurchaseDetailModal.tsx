@@ -1,92 +1,86 @@
 import React from "react";
-import { FaFileDownload } from "react-icons/fa";
+import type { Purchase } from "../../types/purchase";
 
-interface Purchase {
-    id: number;
-    item: string;
-    supplier: string;
-    date: string;
-    amount: number;
-    document: string | null;
-    status: "pending_payment" | "paid";
+interface PurchaseDetailModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  purchase: Purchase;
 }
 
-const formatDate = (date: string) =>
-    new Intl.DateTimeFormat('en-US', { day: '2-digit', month: 'long', year: 'numeric' }).format(
-        new Date(date)
-    );
+const PurchaseDetailModal: React.FC<PurchaseDetailModalProps> = ({
+  isOpen,
+  onClose,
+  purchase,
+}) => {
+  if (!isOpen) return null;
 
-const formatCurrency = (amount: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'XOF' }).format(amount);
-
-const getStatusColor = (status: string) => {
-    switch (status) {
-        case 'pending_payment': return 'bg-yellow-100 text-yellow-800';
-        case 'paid': return 'bg-green-100 text-green-800';
-        default: return 'bg-gray-100 text-gray-800';
-    }
-};
-
-const PurchaseDetailModal: React.FC<{
-    isOpen: boolean;
-    onClose: () => void;
-    purchase: Purchase | null;
-}> = ({ isOpen, onClose, purchase }) => {
-    if (!isOpen || !purchase) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 space-y-4">
-                <h3 className="text-xl font-semibold text-gray-800 border-b pb-2">Purchase Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Item</p>
-                        <p className="text-lg font-semibold text-gray-800">{purchase.item}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Supplier</p>
-                        <p className="text-lg font-semibold text-gray-800">{purchase.supplier}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Date</p>
-                        <p className="text-lg font-semibold text-gray-800">{formatDate(purchase.date)}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Amount</p>
-                        <p className="text-lg font-semibold text-gray-800">{formatCurrency(purchase.amount)}</p>
-                    </div>
-                    <div>
-                        <p className="text-sm font-medium text-gray-500">Status</p>
-                        <span className={`inline-flex px-2 py-1 text-sm font-medium rounded-full ${getStatusColor(purchase.status)}`}>
-                            {purchase.status === 'pending_payment' && 'Pending Payment'}
-                            {purchase.status === 'paid' && 'Paid'}
-                        </span>
-                    </div>
-                    {purchase.document && (
-                        <div>
-                            <p className="text-sm font-medium text-gray-500">Proof</p>
-                            <a 
-                                href="#" 
-                                onClick={(e) => e.preventDefault()}
-                                className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-800 transition-colors"
-                            >
-                                <FaFileDownload />
-                                {purchase.document}
-                            </a>
-                        </div>
-                    )}
-                </div>
-                <div className="flex justify-end pt-4">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 pt-10">
+      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="text-xl font-semibold text-gray-800">Détails de l'achat</h3>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            ✕
+          </button>
         </div>
-    );
+
+        <div className="p-6 space-y-4">
+          <div>
+            <strong>Fournisseur :</strong> {purchase.supplier_name}
+          </div>
+          <div>
+            <strong>Date :</strong> {new Date(purchase.date).toLocaleDateString()}
+          </div>
+          <div>
+            <strong>Montant total :</strong> {purchase.total_amount} FCFA
+          </div>
+          <div>
+            <strong>Statut :</strong> {purchase.status}
+          </div>
+
+          <div>
+            <strong>Articles :</strong>
+            <table className="w-full mt-2 border-collapse">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="border px-2 py-1">Nom</th>
+                  <th className="border px-2 py-1">Quantité</th>
+                  <th className="border px-2 py-1">Prix unitaire</th>
+                  <th className="border px-2 py-1">Magasin</th>
+                </tr>
+              </thead>
+              <tbody>
+                {purchase.items?.map((item, idx) => (
+                  <tr key={idx}>
+                    <td className="border px-2 py-1">{item.product_name}</td>
+                    <td className="border px-2 py-1">{item.quantity}</td>
+                    <td className="border px-2 py-1">{item.unit_price}</td>
+                    <td className="border px-2 py-1">{item.store_id}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div>
+            <strong>Reçu de paiement :</strong>{" "}
+            {purchase.receipt_url ? (
+              <a
+                href={purchase.receipt_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+              >
+                Voir Reçu
+              </a>
+            ) : (
+              <span className="text-gray-400">Aucun reçu</span>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default PurchaseDetailModal;
