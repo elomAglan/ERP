@@ -19,6 +19,7 @@ export default function PurchasesPage() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showReceptionModal, setShowReceptionModal] = useState<Purchase | null>(null);
+  const [files, setFiles] = useState<{ [key: number]: File | null }>({});
 
   const fetchData = async () => {
     const [itemsRes, storesRes, purchasesRes] = await Promise.all([
@@ -33,15 +34,58 @@ export default function PurchasesPage() {
 
   useEffect(() => { fetchData(); }, []);
 
-  return (
-    <div style={{ padding:20 }}>
-      <h1>Achats</h1>
-      <button onClick={() => setShowAddModal(true)}>Créer un achat</button>
+  // Télécharger le bon de commande PDF
+  const handleDownloadPDF = (purchaseId: number) => {
+    window.open(`http://localhost:5000/api/purchases/${purchaseId}/pdf`, "_blank");
+  };
 
-      <table style={{ width:"100%", borderCollapse:"collapse", marginTop:20 }}>
+  // Sélection fichier reçu
+  const handleFileChange = (purchaseId: number, file: File | null) => {
+    setFiles(prev => ({ ...prev, [purchaseId]: file }));
+  };
+
+  // Upload reçu
+  const handleUploadReceipt = async (purchaseId: number) => {
+  const file = files[purchaseId];
+  if (!file) {
+    alert("Veuillez sélectionner un fichier.");
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    await axios.put(`http://localhost:5000/api/purchases/${purchaseId}/receipt`, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    alert("Reçu uploadé avec succès !");
+    setFiles(prev => ({ ...prev, [purchaseId]: null }));
+    fetchData(); // rafraîchir la liste des achats
+  } catch (err) {
+    console.error("Erreur upload reçu :", err);
+    alert("Erreur lors de l'upload du reçu.");
+  }
+};
+
+
+  return (
+    <div style={{ padding: 20 }}>
+      <h1>Achats</h1>
+      <button style={btnPrimary} onClick={() => setShowAddModal(true)}>
+        Créer un achat
+      </button>
+
+      <table style={tableStyle}>
         <thead>
           <tr>
-            <th>ID</th><th>Fournisseur</th><th>Total</th><th>Date</th><th>Actions</th>
+            <th>ID</th>
+            <th>Fournisseur</th>
+            <th>Total</th>
+            <th>Date</th>
+            <th>Réception</th>
+            <th>Bon de commande</th>
+            <th>Reçu</th>
           </tr>
         </thead>
         <tbody>
@@ -52,13 +96,32 @@ export default function PurchasesPage() {
               <td>{p.total_amount}</td>
               <td>{new Date(p.date).toLocaleString()}</td>
               <td>
-                <button onClick={() => setShowReceptionModal(p)}>Réception</button>
+                <button style={btnPrimary} onClick={() => setShowReceptionModal(p)}>
+                  Réception
+                </button>
+              </td>
+              <td>
+                <button style={btnSecondary} onClick={() => handleDownloadPDF(p.id)}>
+                  Télécharger BC
+                </button>
+              </td>
+              <td>
+                <div style={{ display:"flex", gap:"5px" }}>
+                  <input
+                    type="file"
+                    onChange={(e) => handleFileChange(p.id, e.target.files ? e.target.files[0] : null)}
+                  />
+                  <button style={btnPrimary} onClick={() => handleUploadReceipt(p.id)}>
+                    Upload
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
       </table>
 
+      {/* Modal ajout */}
       {showAddModal && (
         <AddPurchaseModal 
           items={items} 
@@ -68,9 +131,10 @@ export default function PurchasesPage() {
         />
       )}
 
+      {/* Modal réception */}
       {showReceptionModal && (
         <ReceptionModal 
-          purchase={showReceptionModal}   // ✅ on passe tout l'objet achat
+          purchase={showReceptionModal}
           onClose={() => setShowReceptionModal(null)} 
           onReceived={fetchData} 
         />
@@ -78,3 +142,28 @@ export default function PurchasesPage() {
     </div>
   );
 }
+
+/* ---- Styles simples ---- */
+const tableStyle: React.CSSProperties = {
+  width: "100%",
+  borderCollapse: "collapse",
+  marginTop: 20,
+};
+
+const btnPrimary: React.CSSProperties = {
+  padding: "6px 12px",
+  background: "#4CAF50",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+};
+
+const btnSecondary: React.CSSProperties = {
+  padding: "6px 12px",
+  background: "#2196F3",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  cursor: "pointer",
+};
