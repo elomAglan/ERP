@@ -31,13 +31,22 @@ const purchaseController = {
     }
   },
 
+  // -------------------- ACHAT UNIQUE AVEC NOM PRODUITS --------------------
   getOne: async (req, res) => {
     try {
       const id = req.params.id;
       const purchase = await dbGet("SELECT * FROM purchases WHERE id = ?", [id]);
       if (!purchase) return res.status(404).json({ error: "Achat non trouvé" });
 
-      const items = await dbAll("SELECT * FROM purchase_items WHERE purchase_id = ?", [id]);
+      // Récupérer les items avec le nom du produit
+      const items = await dbAll(
+        `SELECT pi.id, pi.quantity, pi.received_quantity, i.name
+         FROM purchase_items pi
+         JOIN items i ON pi.product_id = i.id
+         WHERE pi.purchase_id = ?`,
+        [id]
+      );
+
       purchase.items = items;
       res.json(purchase);
     } catch (err) {
@@ -105,7 +114,10 @@ const purchaseController = {
       if (!Array.isArray(items) || items.length === 0)
         return res.status(400).json({ error: "Items requis" });
 
-      const firstItem = await dbGet("SELECT purchase_id FROM purchase_items WHERE id = ?", [items[0].purchase_item_id]);
+      const firstItem = await dbGet(
+        "SELECT purchase_id FROM purchase_items WHERE id = ?",
+        [items[0].purchase_item_id]
+      );
       if (!firstItem) return res.status(404).json({ error: "Article non trouvé" });
 
       const purchaseId = firstItem.purchase_id;
@@ -126,7 +138,10 @@ const purchaseController = {
         );
       }
 
-      const remaining = await dbAll("SELECT * FROM purchase_items WHERE purchase_id = ? AND received_quantity < quantity", [purchaseId]);
+      const remaining = await dbAll(
+        "SELECT * FROM purchase_items WHERE purchase_id = ? AND received_quantity < quantity",
+        [purchaseId]
+      );
       const status = remaining.length === 0 ? "received" : "partial";
       await dbRun("UPDATE purchases SET status = ? WHERE id = ?", [status, purchaseId]);
 
@@ -144,7 +159,14 @@ const purchaseController = {
       const purchase = await dbGet("SELECT * FROM purchases WHERE id = ?", [id]);
       if (!purchase) return res.status(404).json({ error: "Achat non trouvé" });
 
-      const items = await dbAll("SELECT * FROM purchase_items WHERE purchase_id = ?", [id]);
+      // Récupérer les items avec le nom
+      const items = await dbAll(
+        `SELECT pi.id, pi.quantity, pi.unit_price, i.name
+         FROM purchase_items pi
+         JOIN items i ON pi.product_id = i.id
+         WHERE pi.purchase_id = ?`,
+        [id]
+      );
 
       const doc = new PDFDocument();
       res.setHeader("Content-Type", "application/pdf");
@@ -158,7 +180,7 @@ const purchaseController = {
       doc.moveDown();
 
       items.forEach(item => {
-        doc.text(`Produit ${item.product_id} - Qté: ${item.quantity} - Prix: ${item.unit_price}`);
+        doc.text(`Produit: ${item.name} - Qté: ${item.quantity} - Prix: ${item.unit_price}`);
       });
 
       doc.end();
