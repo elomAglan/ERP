@@ -7,13 +7,15 @@ interface Item {
   purchasePrice: number;
   salePrice?: number;
 }
-
 interface EditItemModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (item: Item) => Promise<void>;
+  onSave: (updatedItem: Omit<Item, 'salePrice'> & { salePrice?: number }) => Promise<void>;
   itemToEdit: Item | null;
+  isLoading: boolean; // Add this line
 }
+
+
 
 const EditItemModal: React.FC<EditItemModalProps> = ({ isOpen, onClose, onSave, itemToEdit }) => {
   const [formData, setFormData] = useState<Omit<Item, "id">>({

@@ -11,11 +11,14 @@ interface Item {
   salePrice: number;
 }
 
+
+
 // Defines the required props for the AddItemModal component.
 interface AddItemModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (item: Omit<Item, 'id'>) => Promise<Item>;
+  isLoading: boolean; // Add this line
 }
 
 const AddItemModal: React.FC<AddItemModalProps> = ({ isOpen, onClose, onAdd }) => {
