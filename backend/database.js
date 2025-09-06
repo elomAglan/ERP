@@ -1,4 +1,3 @@
-// database.js
 const sqlite3 = require("sqlite3").verbose();
 const bcrypt = require("bcryptjs");
 const path = require("path");
@@ -7,10 +6,13 @@ const path = require("path");
 const dbPath = path.resolve(__dirname, "database.sqlite");
 const db = new sqlite3.Database(dbPath, (err) => {
     if (err) console.error("Erreur ouverture DB:", err.message);
-    else console.log("Connecté à SQLite:", dbPath);
+    else {
+        console.log("Connecté à SQLite:", dbPath);
+        db.run("PRAGMA foreign_keys = ON"); // 🔑 Active les contraintes de clés étrangères
+    }
 });
 
-// --- Fonctions utilitaires avec Promises ---
+// --- Fonctions utilitaires Promises ---
 const dbRun = (query, params = []) =>
     new Promise((resolve, reject) => {
         db.run(query, params, function (err) {
@@ -35,7 +37,7 @@ const dbGet = (query, params = []) =>
         });
     });
 
-// --- Migration table users (ajout username si absent) ---
+// --- Migrations ---
 async function migrateUsersTable() {
     try {
         const columns = await dbAll("PRAGMA table_info(users)");
@@ -49,7 +51,6 @@ async function migrateUsersTable() {
     }
 }
 
-// --- Migration table purchases (ajout status, bc_number, receipt_url si absents) ---
 async function migratePurchasesTable() {
     try {
         const columns = await dbAll("PRAGMA table_info(purchases)");
@@ -72,10 +73,26 @@ async function migratePurchasesTable() {
     }
 }
 
-// --- Création des tables ---
+async function migratePurchaseItems() {
+    try {
+        const columns = await dbAll("PRAGMA table_info(purchase_items)");
+        const names = columns.map(c => c.name);
+
+        if (!names.includes("received_quantity")) {
+            await dbRun("ALTER TABLE purchase_items ADD COLUMN received_quantity REAL DEFAULT 0");
+            console.log("✅ Colonne 'received_quantity' ajoutée à purchase_items");
+        } else {
+            console.log("Colonne 'received_quantity' déjà présente dans purchase_items");
+        }
+    } catch (err) {
+        console.error("❌ Migration purchase_items:", err.message);
+    }
+}
+
+// --- Création des tables principales ---
 async function initializeDatabase() {
     try {
-        // Table users
+        // Utilisateurs
         await dbRun(`
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -86,7 +103,7 @@ async function initializeDatabase() {
         console.log("Table 'users' prête.");
         await migrateUsersTable();
 
-        // Table items (produits)
+        // Produits
         await dbRun(`
             CREATE TABLE IF NOT EXISTS items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -99,7 +116,7 @@ async function initializeDatabase() {
         `);
         console.log("Table 'items' prête.");
 
-        // Table stores (magasins)
+        // Magasins
         await dbRun(`
             CREATE TABLE IF NOT EXISTS stores (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,7 +127,7 @@ async function initializeDatabase() {
         `);
         console.log("Table 'stores' prête.");
 
-        // Table stock_movements (mouvements de stock)
+        // Mouvements de stock
         await dbRun(`
             CREATE TABLE IF NOT EXISTS stock_movements (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,7 +144,7 @@ async function initializeDatabase() {
         `);
         console.log("Table 'stock_movements' prête.");
 
-        // Table purchases (achats)
+        // Achats
         await dbRun(`
             CREATE TABLE IF NOT EXISTS purchases (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -139,7 +156,7 @@ async function initializeDatabase() {
         console.log("Table 'purchases' prête.");
         await migratePurchasesTable();
 
-        // Table purchase_items (articles d'un achat)
+        // Articles d'achat
         await dbRun(`
             CREATE TABLE IF NOT EXISTS purchase_items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -154,62 +171,42 @@ async function initializeDatabase() {
             )
         `);
         console.log("Table 'purchase_items' prête.");
-
-    } catch (err) {
-        console.error("Erreur initialisation DB:", err.message);
-    }
-}
-
-// --- Migration pour ajouter received_quantity si absente ---
-async function migratePurchaseItems() {
-    try {
-        // Vérifie la structure de la table
-        const columns = await dbAll("PRAGMA table_info(purchase_items)");
-        const names = columns.map(c => c.name);
-
-        // Si la colonne n'existe pas, on l'ajoute
-        if (!names.includes("received_quantity")) {
-            await dbRun("ALTER TABLE purchase_items ADD COLUMN received_quantity REAL DEFAULT 0");
-            console.log("✅ Colonne 'received_quantity' ajoutée à purchase_items");
-        } else {
-            console.log("Colonne 'received_quantity' déjà présente dans purchase_items");
-        }
-    } catch (err) {
-        console.error("❌ Migration purchase_items:", err.message);
-    }
-}
-
-// --- Appel après création de la table purchase_items ---
-async function initializeDatabase() {
-    try {
-        // ... création des autres tables ...
-
-        // Table purchase_items
-        await dbRun(`
-            CREATE TABLE IF NOT EXISTS purchase_items (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                purchase_id INTEGER NOT NULL,
-                product_id INTEGER NOT NULL,
-                quantity REAL NOT NULL,
-                unit_price REAL NOT NULL,
-                store_id INTEGER NOT NULL,
-                FOREIGN KEY(purchase_id) REFERENCES purchases(id),
-                FOREIGN KEY(product_id) REFERENCES items(id),
-                FOREIGN KEY(store_id) REFERENCES stores(id)
-            )
-        `);
-        console.log("Table 'purchase_items' prête.");
-
-        // ✅ Migration pour received_quantity
         await migratePurchaseItems();
 
+        // Ventes
+        await dbRun(`
+            CREATE TABLE IF NOT EXISTS sales (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                customer_name TEXT,
+                total_amount REAL NOT NULL,
+                date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT 'completed'
+            )
+        `);
+        console.log("Table 'sales' prête.");
+
+        // Articles d'une vente
+        await dbRun(`
+            CREATE TABLE IF NOT EXISTS sale_items (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sale_id INTEGER NOT NULL,
+                product_id INTEGER NOT NULL,
+                quantity REAL NOT NULL,
+                unit_price REAL NOT NULL,
+                store_id INTEGER NOT NULL,
+                FOREIGN KEY(sale_id) REFERENCES sales(id),
+                FOREIGN KEY(product_id) REFERENCES items(id),
+                FOREIGN KEY(store_id) REFERENCES stores(id)
+            )
+        `);
+        console.log("Table 'sale_items' prête.");
+
     } catch (err) {
         console.error("Erreur initialisation DB:", err.message);
     }
 }
 
-
-// Lancer l'initialisation
+// --- Initialisation ---
 initializeDatabase();
 
 // --- Export ---

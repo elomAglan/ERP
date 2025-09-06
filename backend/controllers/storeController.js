@@ -26,14 +26,12 @@ exports.addStore = async (req, res) => {
     const zoneArray = Array.isArray(zone) ? zone : [];
 
     try {
-        // Vérifier unicité insensible à la casse et aux espaces
+        // Vérifier unicité insensible à la casse
         const existingStore = await dbGet(
             "SELECT id FROM stores WHERE LOWER(TRIM(name)) = ?",
             [normalizedName]
         );
-        if (existingStore) {
-            return res.status(409).json({ error: 'Un magasin avec ce nom existe déjà.' });
-        }
+        if (existingStore) return res.status(409).json({ error: 'Un magasin avec ce nom existe déjà.' });
 
         // Générer le code automatiquement
         const lastStore = await dbGet("SELECT code FROM stores ORDER BY id DESC LIMIT 1");
@@ -76,9 +74,7 @@ exports.updateStore = async (req, res) => {
             "SELECT id FROM stores WHERE LOWER(TRIM(name)) = ? AND id != ?",
             [normalizedName, id]
         );
-        if (existingConflict) {
-            return res.status(409).json({ error: 'Un autre magasin avec ce nom existe déjà.' });
-        }
+        if (existingConflict) return res.status(409).json({ error: 'Un autre magasin avec ce nom existe déjà.' });
 
         const result = await dbRun(
             "UPDATE stores SET name = ?, zone = ? WHERE id = ?",
@@ -104,13 +100,24 @@ exports.deleteStores = async (req, res) => {
     try {
         const placeholders = ids.map(() => '?').join(',');
 
-        // Vérifier que les magasins ne contiennent pas d'articles
-        const storesWithItems = await dbAll(
+        // Vérifier que les magasins ne contiennent pas d'articles ou mouvements
+        const storesWithPurchases = await dbAll(
             `SELECT DISTINCT store_id FROM purchase_items WHERE store_id IN (${placeholders})`,
             ids
         );
-        if (storesWithItems.length > 0) {
-            return res.status(400).json({ error: 'Impossible de supprimer un magasin contenant des articles.' });
+        const storesWithSales = await dbAll(
+            `SELECT DISTINCT store_id FROM sale_items WHERE store_id IN (${placeholders})`,
+            ids
+        );
+        const storesWithStockMovements = await dbAll(
+            `SELECT DISTINCT store_id FROM stock_movements WHERE store_id IN (${placeholders})`,
+            ids
+        );
+
+        if (storesWithPurchases.length > 0 || storesWithSales.length > 0 || storesWithStockMovements.length > 0) {
+            return res.status(400).json({ 
+                error: 'Impossible de supprimer un magasin contenant des achats, ventes ou mouvements de stock.' 
+            });
         }
 
         const result = await dbRun(`DELETE FROM stores WHERE id IN (${placeholders})`, ids);
