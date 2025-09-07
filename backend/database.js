@@ -206,6 +206,23 @@ async function initializeDatabase() {
     }
 }
 
+// --- Fonction utilitaire pour récupérer le stock actuel d'un produit dans un magasin ---
+const getStock = async (product_id, store_id) => {
+  const row = await dbGet(
+    `
+    SELECT 
+      COALESCE(SUM(CASE WHEN type IN ('IN','ADJUST','TRANSFER_IN') THEN quantity ELSE 0 END),0)
+      - COALESCE(SUM(CASE WHEN type IN ('OUT','TRANSFER_OUT') THEN quantity ELSE 0 END),0) AS current_stock
+    FROM stock_movements
+    WHERE product_id=? AND store_id=?
+    `,
+    [product_id, store_id]
+  );
+  return row?.current_stock || 0;
+};
+
+
+
 // --- Initialisation ---
 initializeDatabase();
 
@@ -214,5 +231,6 @@ module.exports = {
     dbRun,
     dbAll,
     dbGet,
-    db
+    db,
+    getStock,
 };

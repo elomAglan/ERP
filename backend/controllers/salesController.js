@@ -1,4 +1,4 @@
-const { dbRun, dbAll, dbGet } = require("../database");
+const { dbRun, dbAll, dbGet,getStock } = require("../database");
 const PDFDocument = require("pdfkit");
 
 const salesController = {
@@ -46,55 +46,55 @@ const salesController = {
   },
 
   // -------------------- CRÉER UNE VENTE --------------------
-  create: async (req, res) => {
+create: async (req, res) => {
     try {
       const { customer_name, customer_phone, customer_address, items } = req.body;
 
       // ✅ Vérifications de base
       if (!customer_name || !customer_phone || !customer_address)
         return res.status(400).json({ error: "Nom, téléphone et adresse du client sont obligatoires" });
+
       if (!items || !Array.isArray(items) || items.length === 0)
         return res.status(400).json({ error: "Au moins un article est requis" });
 
-      // ✅ Vérifier que chaque item a produit et magasin sélectionnés
       for (const item of items) {
         if (!item.product_id || !item.store_id) {
           return res.status(400).json({ error: "Chaque article doit avoir un produit et un magasin" });
         }
       }
 
+      // ✅ Vérification du stock AVANT insertion de la vente
+      for (const i of items) {
+        const totalStock = await getStock(i.product_id, i.store_id);
+
+        if (totalStock < i.quantity) {
+          return res.status(400).json({
+            error: `Stock insuffisant pour le produit ID ${i.product_id} dans le magasin ID ${i.store_id}. Disponible: ${totalStock}, demandé: ${i.quantity}`
+          });
+        }
+      }
+
       // ✅ Calcul du montant total
       const total_amount = items.reduce((sum, i) => sum + i.quantity * i.unit_price, 0);
 
-      // ✅ Créer la vente
+      // ✅ Création de la vente
       const result = await dbRun(
         `INSERT INTO sales (customer_name, customer_phone, customer_address, total_amount, status, date)
          VALUES (?, ?, ?, ?, ?, datetime('now'))`,
         [customer_name, customer_phone, customer_address, total_amount, "completed"]
       );
 
-      const sale_id = result.id; // ← CORRECTION ICI
+      const sale_id = result.id || result.lastID;
       if (!sale_id) throw new Error("Impossible de récupérer l'ID de la vente");
 
-      // ✅ Ajouter les items et vérifier le stock
+      // ✅ Ajout des items et mouvements de stock
       for (const i of items) {
-        const stock = await dbAll(
-          `SELECT SUM(quantity) as total_stock
-           FROM stock_movements
-           WHERE product_id = ? AND store_id = ?`,
-          [i.product_id, i.store_id]
-        );
-        const totalStock = stock[0]?.total_stock || 0;
-        if (totalStock < i.quantity)
-          return res.status(400).json({ error: `Stock insuffisant pour le produit ID ${i.product_id} dans le magasin ID ${i.store_id}` });
-
-        // Ajouter à sale_items
         await dbRun(
           "INSERT INTO sale_items (sale_id, product_id, quantity, unit_price, store_id) VALUES (?, ?, ?, ?, ?)",
           [sale_id, i.product_id, i.quantity, i.unit_price, i.store_id]
         );
 
-        // Ajouter le mouvement de stock
+        // Mouvement sortant (OUT)
         await dbRun(
           `INSERT INTO stock_movements (product_id, store_id, type, quantity, reference)
            VALUES (?, ?, 'OUT', ?, ?)`,
