@@ -46,7 +46,7 @@ const App: React.FC = () => {
             <div className="flex h-screen font-sans text-gray-800 bg-gray-100">
               <Sidebar setIsAuthenticated={setIsAuthenticated} />
               <main className="flex-1 p-8 overflow-auto">
-                <div className="bg-white rounded-2xl shadow-lg p-6 min-h-full">
+                <div className="min-h-full">
                   <Routes>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
